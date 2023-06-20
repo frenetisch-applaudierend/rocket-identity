@@ -4,7 +4,7 @@ use rocket::{
     local::blocking::Client,
     routes, Build, Request, Rocket,
 };
-use rocket_identity::{auth::Authenticated, scheme::Basic};
+use rocket_identity::{auth::Authenticated, scheme::Basic, RocketExt, config::Config};
 
 #[get("/authenticated")]
 fn handler(auth: Authenticated) -> String {
@@ -20,7 +20,7 @@ fn setup() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
-        .manage(rocket_identity::config::Config::new().add_scheme(Basic))
+        .add_identity(Config::new().add_scheme(Basic::new("Server")))
 }
 
 #[test]
@@ -49,7 +49,7 @@ fn request_without_credentials_fails() {
     assert_eq!(res.status(), Status::Unauthorized);
     assert_eq!(
         res.headers().get("WWW-Authenticate").collect::<Vec<_>>(),
-        vec!["Basic"]
+        vec![r#"Basic realm="Server""#]
     );
     assert_ne!(res.into_string().expect("Unexpected body"), "ok");
 }

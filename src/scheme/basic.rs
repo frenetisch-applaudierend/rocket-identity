@@ -5,14 +5,24 @@ use crate::auth::User;
 
 use super::{AuthenticationScheme, Outcome};
 
-pub struct Basic;
+pub struct Basic {
+    challenge: String,
+}
+
+impl Basic {
+    pub fn new(realm: &str) -> Self {
+        Self {
+            challenge: format!("Basic realm=\"{}\"", realm),
+        }
+    }
+}
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Basic {
     async fn autenticate(&self, req: &rocket::Request) -> Outcome {
         for header in req.headers().get("Authorization") {
             println!("Checking {}", header);
-            
+
             // We expect a Basic scheme
             let Some(credentials) = header.strip_prefix("Basic ") else {
                 continue;
@@ -37,5 +47,9 @@ impl AuthenticationScheme for Basic {
 
         // no headers we cannot handle the request
         Outcome::Forward(())
+    }
+
+    fn challenge(&self) -> String {
+        self.challenge.clone()
     }
 }

@@ -64,7 +64,7 @@ impl<P: Policy> Authorized<P> {
         let config = req
             .rocket()
             .state::<Config>()
-            .expect("Missing IdentityConfiguration");
+            .expect("Missing configuration");
 
         for scheme in config.auth_schemes.iter() {
             match scheme.autenticate(req).await {
