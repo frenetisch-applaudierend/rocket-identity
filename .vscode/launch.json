@@ -1,0 +1,22 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'rocket-identity'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run"
+                ],
+                "filter": {
+                    "name": "rocket-identity",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
