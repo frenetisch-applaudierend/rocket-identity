@@ -1,7 +1,8 @@
 use base64::Engine;
 use rocket::http::Status;
+use thiserror::Error;
 
-use crate::auth::User;
+use crate::auth::Authenticator;
 
 use super::{AuthenticationScheme, Outcome};
 
@@ -12,7 +13,7 @@ pub struct Basic {
 impl Basic {
     pub fn new(realm: &str) -> Self {
         Self {
-            challenge: format!("Basic realm=\"{}\"", realm),
+            challenge: format!(r#"Basic realm="{}", charset="UTF-8""#, realm),
         }
     }
 }
@@ -40,16 +41,34 @@ impl AuthenticationScheme for Basic {
                 Err(err) => return Outcome::Failure((Status::BadRequest, Box::new(err))),
             };
 
-            return Outcome::Success(User {
-                user_name: credentials,
-            });
+            let Some((user, pass)) = credentials.split_once(':') else {
+                return Outcome::Failure((Status::BadRequest, Box::new(BasicError::InvalidUserPass)))
+            };
+
+            let authenticator = req
+                .guard::<Authenticator>()
+                .await
+                .expect("Authenticator should never fail");
+
+            let user = match authenticator.login(user, pass).await {
+                Ok(user) => user,
+                Err(err) => return Outcome::Failure((Status::Unauthorized, Box::new(err))),
+            };
+
+            return Outcome::Success(user);
         }
 
-        // no headers we cannot handle the request
+        // No Authorization headers, we cannot handle the request
         Outcome::Forward(())
     }
 
     fn challenge(&self) -> String {
         self.challenge.clone()
     }
+}
+
+#[derive(Error, Debug)]
+enum BasicError {
+    #[error("Invalid user-pass string provided")]
+    InvalidUserPass,
 }

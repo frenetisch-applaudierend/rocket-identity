@@ -4,7 +4,7 @@ use rocket::{
     local::blocking::Client,
     routes, Build, Request, Rocket,
 };
-use rocket_identity::{auth::Authenticated, scheme::Basic, RocketExt, config::Config};
+use rocket_identity::{auth::Authenticated, config::Config, scheme::Basic, RocketExt};
 
 #[get("/authenticated")]
 fn handler(auth: Authenticated) -> String {
@@ -24,7 +24,7 @@ fn setup() -> Rocket<Build> {
 }
 
 #[test]
-fn request_with_credentials_succeeds() {
+fn request_with_valid_credentials_succeeds() {
     let rocket = setup();
     let client = Client::tracked(rocket).expect("Failed to acquire Client");
 
@@ -34,7 +34,24 @@ fn request_with_credentials_succeeds() {
 
     assert_eq!(res.status(), Status::Ok);
     assert!(!res.headers().contains("WWW-Authenticate"));
-    assert_eq!(res.into_string().expect("Unexpected body"), "user1:pass1");
+    assert_eq!(res.into_string().expect("Unexpected body"), "user1");
+}
+
+#[test]
+fn request_with_invalid_credentials_fails() {
+    let rocket = setup();
+    let client = Client::tracked(rocket).expect("Failed to acquire Client");
+
+    let mut req = client.get("/authenticated");
+    req.add_header(Header::new("Authorization", "Basic dXNlcjE6d3JvbmdwYXNz")); // user1:wrongpass
+    let res = req.dispatch();
+
+    assert_eq!(res.status(), Status::Unauthorized);
+    assert_eq!(
+        res.headers().get("WWW-Authenticate").collect::<Vec<_>>(),
+        vec![r#"Basic realm="Server", charset="UTF-8""#]
+    );
+    assert_ne!(res.into_string().expect("Unexpected body"), "user1");
 }
 
 #[test]
@@ -49,7 +66,7 @@ fn request_without_credentials_fails() {
     assert_eq!(res.status(), Status::Unauthorized);
     assert_eq!(
         res.headers().get("WWW-Authenticate").collect::<Vec<_>>(),
-        vec![r#"Basic realm="Server""#]
+        vec![r#"Basic realm="Server", charset="UTF-8""#]
     );
-    assert_ne!(res.into_string().expect("Unexpected body"), "ok");
+    assert_ne!(res.into_string().expect("Unexpected body"), "user1");
 }
