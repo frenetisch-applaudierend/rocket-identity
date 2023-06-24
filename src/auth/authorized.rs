@@ -1,8 +1,8 @@
 use std::marker::PhantomData;
 
 use crate::{
-    config::Config,
     policy::{Any, Policy},
+    scheme::AuthenticationSchemes,
 };
 
 use super::{AuthorizationError, User};
@@ -14,9 +14,26 @@ pub struct Authorized<P: Policy> {
     _marker: PhantomData<P>,
 }
 
-impl<P: Policy> rocket::Sentinel for Authorized<P> {
-    fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
-        rocket.state::<crate::config::Config>().is_none()
+impl<P: Policy> Authorized<P> {
+    async fn get_user(
+        req: &rocket::Request<'_>,
+    ) -> rocket::request::Outcome<User, AuthorizationError> {
+        use rocket::outcome::Outcome::*;
+
+        let schemes = req
+            .rocket()
+            .state::<AuthenticationSchemes>()
+            .expect("Missing required AuthenticationSchemeCollection");
+
+        for scheme in schemes.0.iter() {
+            match scheme.autenticate(req).await {
+                Success(user) => return Success(user),
+                Failure((status, err)) => return Failure((status, AuthorizationError::Other(err))),
+                Forward(_) => (),
+            }
+        }
+
+        Forward(())
     }
 }
 
@@ -52,28 +69,5 @@ impl<'r, P: Policy> rocket::request::FromRequest<'r> for Authorized<P> {
                 AuthorizationError::PolicyFailed,
             ))
         }
-    }
-}
-
-impl<P: Policy> Authorized<P> {
-    async fn get_user(
-        req: &rocket::Request<'_>,
-    ) -> rocket::request::Outcome<User, AuthorizationError> {
-        use rocket::outcome::Outcome::*;
-
-        let config = req
-            .rocket()
-            .state::<Config>()
-            .expect("Missing configuration");
-
-        for scheme in config.auth_schemes.iter() {
-            match scheme.autenticate(req).await {
-                Success(user) => return Success(user),
-                Failure((status, err)) => return Failure((status, AuthorizationError::Other(err))),
-                Forward(_) => (),
-            }
-        }
-
-        Forward(())
     }
 }

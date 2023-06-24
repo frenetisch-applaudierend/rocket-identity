@@ -1,4 +1,4 @@
-use crate::config::Config;
+use super::AuthenticationSchemes;
 
 pub(crate) struct Challenger;
 
@@ -22,12 +22,12 @@ impl rocket::fairing::Fairing for Challenger {
             return;
         }
 
-        let config = req
+        let auth_schemes = req
             .rocket()
-            .state::<Config>()
+            .state::<AuthenticationSchemes>()
             .expect("Missing configuration");
 
-        for scheme in &config.auth_schemes {
+        for scheme in auth_schemes.0.iter() {
             res.adjoin_header(rocket::http::Header::new(
                 "WWW-Authenticate",
                 scheme.challenge(),

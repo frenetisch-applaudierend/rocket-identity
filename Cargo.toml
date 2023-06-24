@@ -7,5 +7,6 @@ edition = "2021"
 
 [dependencies]
 base64 = "0.21"
+ring = "0.16"
 rocket = { version = "=0.5.0-rc.3", default-features = false }
 thiserror = "1.0"

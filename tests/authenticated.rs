@@ -4,11 +4,17 @@ use rocket::{
     local::blocking::Client,
     routes, Build, Request, Rocket,
 };
-use rocket_identity::{auth::Authenticated, config::Config, scheme::Basic, RocketExt};
+use rocket_identity::{
+    auth::{Authenticated, IdentityPasswordHasher},
+    config::Config,
+    persistence::InMemoryRepository,
+    scheme::Basic,
+    RocketExt,
+};
 
 #[get("/authenticated")]
 fn handler(auth: Authenticated) -> String {
-    auth.user.user_name
+    auth.user.username
 }
 
 #[catch(401)]
@@ -17,10 +23,18 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 }
 
 fn setup() -> Rocket<Build> {
+    let hasher = IdentityPasswordHasher;
+    let mut repository = InMemoryRepository::new();
+    repository.add_user("user1", "pass1", &hasher);
+
     rocket::build()
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
-        .add_identity(Config::new().add_scheme(Basic::new("Server")))
+        .add_identity(
+            Config::new(repository)
+                .use_password_hasher(hasher)
+                .add_scheme(Basic::new("Server")),
+        )
 }
 
 #[test]
