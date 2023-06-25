@@ -4,7 +4,7 @@ use rocket::{
     serde::{json::Json, Deserialize, Serialize},
 };
 use rocket_identity::{
-    auth::{hasher, UserRepository},
+    auth::{hasher, UserRepository, Authenticated},
     config::Config,
     persistence::InMemoryRepository,
     scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
@@ -29,7 +29,7 @@ struct LoginResponse {
 }
 
 #[post("/login", format = "application/json", data = "<body>")]
-async fn index(
+async fn login(
     users: UserRepository<'_>,
     token_provider: JwtTokenProvider<'_>,
     body: Json<LoginRequest>,
@@ -49,6 +49,11 @@ async fn index(
     }))
 }
 
+#[get("/")]
+fn index(auth: Authenticated) -> String {
+    format!("Hello, {}!", auth.user.username)
+}
+
 #[launch]
 fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
@@ -65,6 +70,6 @@ fn rocket() -> _ {
     };
 
     rocket::build()
-        .mount("/", routes![index])
+        .mount("/", routes![login, index])
         .add_identity(Config::new(repository).add_scheme(JwtBearer::new(jwt_config)))
 }

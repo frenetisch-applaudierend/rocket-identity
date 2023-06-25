@@ -5,3 +5,8 @@ Content-Type: application/json
     "username": "user1",
     "password": "pass1"
 }
+
+###
+
+GET http://localhost:8000/
+Authorization: Bearer <your token here>
