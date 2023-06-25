@@ -5,7 +5,7 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{Authenticated, IdentityPasswordHasher},
+    auth::{hasher::IdentityPasswordHasher, Authenticated},
     config::Config,
     persistence::InMemoryRepository,
     scheme::Basic,
