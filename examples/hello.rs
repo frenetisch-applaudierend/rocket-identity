@@ -1,5 +1,9 @@
 use rocket_identity::{
-    auth::Authenticated, config::Config, persistence::InMemoryRepository, scheme::Basic, RocketExt,
+    auth::{hasher, Authenticated},
+    config::Config,
+    persistence::InMemoryRepository,
+    scheme::Basic,
+    RocketExt,
 };
 
 #[macro_use]
@@ -14,7 +18,7 @@ fn index(auth: Authenticated) -> String {
 fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let hasher = rocket_identity::auth::hasher::default();
+    let hasher = hasher::default();
     let mut repository = InMemoryRepository::new();
     repository.add_user("user1", "pass1", &hasher);
 

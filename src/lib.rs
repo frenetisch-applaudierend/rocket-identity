@@ -12,10 +12,14 @@ pub trait RocketExt {
 }
 
 impl RocketExt for rocket::Rocket<rocket::Build> {
-    fn add_identity(self, config: config::Config) -> Self {
+    fn add_identity(mut self, config: config::Config) -> Self {
         let user_repository = config.user_repository;
         let password_hasher = config.password_hasher;
-        let auth_schemes = AuthenticationSchemes(config.auth_schemes);
+        let auth_schemes = AuthenticationSchemes::from(config.auth_schemes);
+
+        for scheme in auth_schemes.iter() {
+            self = scheme.setup(self);
+        }
 
         self.manage(user_repository)
             .manage(password_hasher)

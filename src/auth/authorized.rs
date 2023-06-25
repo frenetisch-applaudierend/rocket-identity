@@ -25,7 +25,7 @@ impl<P: Policy> Authorized<P> {
             .state::<AuthenticationSchemes>()
             .expect("Missing required AuthenticationSchemeCollection");
 
-        for scheme in schemes.0.iter() {
+        for scheme in schemes.iter() {
             match scheme.autenticate(req).await {
                 Success(user) => return Success(user),
                 Failure((status, err)) => return Failure((status, AuthorizationError::Other(err))),
