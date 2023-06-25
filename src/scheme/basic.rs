@@ -22,8 +22,6 @@ impl Basic {
 impl AuthenticationScheme for Basic {
     async fn autenticate(&self, req: &rocket::Request) -> Outcome {
         for header in req.headers().get("Authorization") {
-            println!("Checking {}", header);
-
             // We expect a Basic scheme
             let Some(credentials) = header.strip_prefix("Basic ") else {
                 continue;

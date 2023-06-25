@@ -19,6 +19,10 @@ pub trait PasswordHasher: Send + Sync {
     }
 }
 
+pub fn default() -> impl PasswordHasher {
+    IdentityPasswordHasher // TODO: Use a real hasher
+}
+
 pub struct IdentityPasswordHasher;
 
 impl PasswordHasher for IdentityPasswordHasher {

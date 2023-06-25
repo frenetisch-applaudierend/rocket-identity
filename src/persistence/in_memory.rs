@@ -1,6 +1,6 @@
 use super::{User, UserRepository};
 use crate::{
-    auth::{self, PasswordHasher},
+    auth::{self, hasher::PasswordHasher},
     util::Result,
 };
 

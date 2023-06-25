@@ -1,5 +1,5 @@
 use crate::{
-    auth::{IdentityPasswordHasher, PasswordHasher},
+    auth::hasher::{self, PasswordHasher},
     persistence::UserRepository,
     scheme::AuthenticationScheme,
 };
@@ -12,7 +12,7 @@ pub struct Config {
 
 impl Config {
     pub fn new(repository: impl UserRepository + 'static) -> Self {
-        let password_hasher = IdentityPasswordHasher;
+        let password_hasher = hasher::default();
 
         Self {
             user_repository: Box::new(repository),
