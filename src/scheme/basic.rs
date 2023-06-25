@@ -1,4 +1,4 @@
-use base64::Engine;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::http::Status;
 use thiserror::Error;
 
@@ -29,7 +29,7 @@ impl AuthenticationScheme for Basic {
 
             let credentials = credentials.trim();
 
-            let credentials = match base64::engine::general_purpose::STANDARD.decode(credentials) {
+            let credentials = match BASE64.decode(credentials) {
                 Ok(creds) => creds,
                 Err(err) => return Outcome::Failure((Status::BadRequest, Box::new(err))),
             };
