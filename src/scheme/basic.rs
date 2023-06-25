@@ -2,7 +2,7 @@ use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::http::Status;
 use thiserror::Error;
 
-use crate::auth::Authenticator;
+use crate::auth::UserRepository;
 
 use super::{AuthenticationScheme, Outcome};
 
@@ -44,7 +44,7 @@ impl AuthenticationScheme for Basic {
             };
 
             let authenticator = req
-                .guard::<Authenticator>()
+                .guard::<UserRepository>()
                 .await
                 .expect("Authenticator should never fail");
 

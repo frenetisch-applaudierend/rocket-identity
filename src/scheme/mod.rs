@@ -1,7 +1,7 @@
-mod basic;
 mod base;
+mod basic;
 
 pub(crate) mod challenger;
 
-pub use basic::*;
 pub use base::*;
+pub use basic::*;

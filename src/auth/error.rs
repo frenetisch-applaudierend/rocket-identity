@@ -15,7 +15,6 @@ pub enum LoginError {
     Other(Box<dyn std::error::Error>),
 }
 
-
 #[derive(Error, Debug)]
 pub enum AuthorizationError {
     #[error("The user is not authenticated")]

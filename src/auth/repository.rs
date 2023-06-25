@@ -3,23 +3,23 @@ use rocket::{
     Request,
 };
 
-use crate::persistence::{self, UserRepository};
+use crate::persistence::{self, UserStore};
 
-use super::{LoginError, hasher::PasswordHasher, User};
+use super::{hasher::PasswordHasher, LoginError, User};
 
-pub struct Authenticator<'a> {
-    repository: &'a dyn UserRepository,
+pub struct UserRepository<'a> {
+    repository: &'a dyn UserStore,
     hasher: &'a dyn PasswordHasher,
 }
 
-impl<'a> Authenticator<'a> {
+impl<'a> UserRepository<'a> {
     pub async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let Some(repo_user) = self.repository.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
             return Err(LoginError::UserNotFound);
         };
 
         let user = Self::user_from_repo(&repo_user);
-        
+
         let Some(password_hash) = repo_user.password_hash else {
             return Err(LoginError::MissingPassword);
         };
@@ -40,13 +40,13 @@ impl<'a> Authenticator<'a> {
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for Authenticator<'r> {
+impl<'r> FromRequest<'r> for UserRepository<'r> {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
         let repository = req
             .rocket()
-            .state::<Box<dyn UserRepository>>()
+            .state::<Box<dyn UserStore>>()
             .expect("Missing required UserRepository");
 
         let hasher = req
@@ -54,7 +54,7 @@ impl<'r> FromRequest<'r> for Authenticator<'r> {
             .state::<Box<dyn PasswordHasher>>()
             .expect("Missing required PasswordHasher");
 
-        Outcome::Success(Authenticator {
+        Outcome::Success(UserRepository {
             repository: &**repository,
             hasher: &**hasher,
         })

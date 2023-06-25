@@ -1,17 +1,17 @@
 use crate::{
     auth::hasher::{self, PasswordHasher},
-    persistence::UserRepository,
+    persistence::UserStore,
     scheme::AuthenticationScheme,
 };
 
 pub struct Config {
-    pub user_repository: Box<dyn UserRepository>,
+    pub user_repository: Box<dyn UserStore>,
     pub password_hasher: Box<dyn PasswordHasher>,
     pub auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
 }
 
 impl Config {
-    pub fn new(repository: impl UserRepository + 'static) -> Self {
+    pub fn new(repository: impl UserStore + 'static) -> Self {
         let password_hasher = hasher::default();
 
         Self {

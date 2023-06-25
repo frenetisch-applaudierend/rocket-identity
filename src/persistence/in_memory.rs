@@ -1,4 +1,4 @@
-use super::{User, UserRepository};
+use super::{User, UserStore};
 use crate::{
     auth::{self, hasher::PasswordHasher},
     util::Result,
@@ -33,7 +33,7 @@ impl InMemoryRepository {
 }
 
 #[rocket::async_trait]
-impl UserRepository for InMemoryRepository {
+impl UserStore for InMemoryRepository {
     async fn find_user_by_username(&self, username: &str) -> Result<Option<User>> {
         for user in &self.users {
             if user.username == username {
