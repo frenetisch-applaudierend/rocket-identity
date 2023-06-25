@@ -1,7 +1,7 @@
 mod basic;
-mod scheme;
+mod base;
 
 pub(crate) mod challenger;
 
 pub use basic::*;
-pub use scheme::*;
+pub use base::*;
