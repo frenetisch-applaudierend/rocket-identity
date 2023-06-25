@@ -15,9 +15,9 @@ impl RocketExt for rocket::Rocket<rocket::Build> {
     fn add_identity(mut self, config: config::Config) -> Self {
         let user_repository = config.user_repository;
         let password_hasher = config.password_hasher;
-        let auth_schemes = AuthenticationSchemes::from(config.auth_schemes);
+        let mut auth_schemes = AuthenticationSchemes::from(config.auth_schemes);
 
-        for scheme in auth_schemes.iter() {
+        for scheme in auth_schemes.iter_mut() {
             self = scheme.setup(self);
         }
 

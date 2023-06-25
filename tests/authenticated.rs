@@ -8,7 +8,7 @@ use rocket_identity::{
     auth::{hasher::IdentityPasswordHasher, Authenticated},
     config::Config,
     persistence::InMemoryRepository,
-    scheme::Basic,
+    scheme::basic::Basic,
     RocketExt,
 };
 

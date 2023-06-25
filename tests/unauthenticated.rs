@@ -2,7 +2,7 @@ use rocket::{get, http::Status, local::blocking::Client, routes};
 
 #[get("/unauthenticated")]
 fn handler() -> &'static str {
-    return "ok";
+    "ok"
 }
 
 #[test]

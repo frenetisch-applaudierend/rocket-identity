@@ -4,7 +4,7 @@ use crate::auth::User;
 
 #[rocket::async_trait]
 pub trait AuthenticationScheme: Send + Sync {
-    fn setup(&self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
+    fn setup(&mut self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
         rocket
     }
 
@@ -24,5 +24,9 @@ impl AuthenticationSchemes {
 
     pub fn iter(&self) -> impl Iterator<Item = &dyn AuthenticationScheme> {
         self.0.iter().map(|b| &**b)
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut dyn AuthenticationScheme> {
+        self.0.iter_mut().map(|b| -> &mut dyn AuthenticationScheme {&mut **b})
     }
 }

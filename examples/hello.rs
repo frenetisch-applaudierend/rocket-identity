@@ -2,7 +2,7 @@ use rocket_identity::{
     auth::{hasher, Authenticated},
     config::Config,
     persistence::InMemoryRepository,
-    scheme::Basic,
+    scheme::basic::Basic,
     RocketExt,
 };
 
