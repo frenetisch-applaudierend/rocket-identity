@@ -16,13 +16,16 @@ fn index(auth: Authenticated) -> String {
 
 #[launch]
 fn rocket() -> _ {
+    // Create a password hasher. In a real app you'd use hasher::default(<salt>) or
+    // another hasher that is secure
+    let hasher = hasher::insecure::IdentityPasswordHasher;
+
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let hasher = hasher::default();
     let mut repository = InMemoryRepository::new();
     repository.add_user("user1", "pass1", &hasher);
 
     rocket::build()
         .mount("/", routes![index])
-        .add_identity(Config::new(repository).add_scheme(Basic::new("Hello")))
+        .add_identity(Config::new(repository, hasher).add_scheme(Basic::new("Hello")))
 }

@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
-use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use jsonwebtoken::{decode, Validation, Algorithm};
+use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
 use rocket::{http::Status, serde::json};
 
-use crate::scheme::{AuthenticationScheme, Outcome};
+use crate::{
+    auth::User,
+    scheme::{AuthenticationScheme, Outcome},
+};
 
 use super::JwtConfig;
 
@@ -13,12 +15,18 @@ pub struct JwtBearer {
     config: Option<JwtConfig>,
 }
 
+type Token = TokenData<HashMap<String, json::Value>>;
+
 impl JwtBearer {
     pub fn new(config: JwtConfig) -> Self {
         Self {
             challenge: "Bearer",
             config: Some(config),
         }
+    }
+
+    fn user_from_token(_token: &Token) -> User {
+        todo!()
     }
 }
 
@@ -47,13 +55,13 @@ impl AuthenticationScheme for JwtBearer {
                 .expect("Missing JwtConfig")
                 .deconding_key;
             let validation = Validation::new(Algorithm::HS256);
-            
+
             let token = match decode::<HashMap<String, json::Value>>(token, key, &validation) {
                 Ok(token) => token,
                 Err(err) => return Outcome::Failure((Status::BadRequest, Box::new(err))),
             };
 
-            let user = todo!("create user from jwt");
+            let user = Self::user_from_token(&token);
 
             return Outcome::Success(user);
         }

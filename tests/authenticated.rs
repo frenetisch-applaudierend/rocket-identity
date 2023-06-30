@@ -5,7 +5,7 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{hasher::IdentityPasswordHasher, Authenticated},
+    auth::{hasher::insecure::IdentityPasswordHasher, Authenticated},
     config::Config,
     persistence::InMemoryRepository,
     scheme::basic::Basic,
@@ -31,8 +31,7 @@ fn setup() -> Rocket<Build> {
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
         .add_identity(
-            Config::new(repository)
-                .use_password_hasher(hasher)
+            Config::new(repository, hasher)
                 .add_scheme(Basic::new("Server")),
         )
 }
