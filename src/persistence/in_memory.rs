@@ -20,7 +20,9 @@ impl InMemoryRepository {
             username: username.to_string(),
         };
 
-        let password_hash = hasher.hash_password(&auth_user, password);
+        let password_hash = hasher
+            .hash_password(&auth_user, password)
+            .expect("Could not hash password");
 
         let repo_user = User {
             id,

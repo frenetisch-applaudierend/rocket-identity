@@ -24,7 +24,11 @@ impl<'a> UserRepository<'a> {
             return Err(LoginError::MissingPassword);
         };
 
-        if !self.hasher.verify_hash(&user, &password_hash, password) {
+        if !self
+            .hasher
+            .verify_password(&user, &password_hash, password)
+            .map_err(LoginError::Other)?
+        {
             return Err(LoginError::IncorrectPassword);
         }
 
