@@ -6,6 +6,7 @@ use rocket::{http::Status, serde::json};
 use crate::{
     auth::User,
     scheme::{AuthenticationScheme, Outcome},
+    util::Result,
 };
 
 use super::JwtConfig;
@@ -15,7 +16,7 @@ pub struct JwtBearer {
     config: Option<JwtConfig>,
 }
 
-type Token = TokenData<HashMap<String, json::Value>>;
+type ParsedToken = TokenData<HashMap<String, json::Value>>;
 
 impl JwtBearer {
     pub fn new(config: JwtConfig) -> Self {
@@ -25,8 +26,18 @@ impl JwtBearer {
         }
     }
 
-    fn user_from_token(_token: &Token) -> User {
-        todo!()
+    fn user_from_token(_token: &ParsedToken) -> Result<User> {
+        let username = _token
+            .claims
+            .get("sub")
+            .ok_or(JwtError::MissingSub)?
+            .as_str()
+            .ok_or(JwtError::InvalidClaim("sub".to_owned()))?;
+
+        Ok(User {
+            id: username.to_owned(),
+            username: username.to_owned(),
+        })
     }
 }
 
@@ -61,9 +72,10 @@ impl AuthenticationScheme for JwtBearer {
                 Err(err) => return Outcome::Failure((Status::BadRequest, Box::new(err))),
             };
 
-            let user = Self::user_from_token(&token);
-
-            return Outcome::Success(user);
+            return match Self::user_from_token(&token) {
+                Ok(user) => Outcome::Success(user),
+                Err(err) => Outcome::Failure((Status::BadRequest, err))
+            };
         }
 
         // No Authorization headers, we cannot handle the request
@@ -73,4 +85,13 @@ impl AuthenticationScheme for JwtBearer {
     fn challenge(&self) -> String {
         self.challenge.to_string()
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+enum JwtError {
+    #[error("Missing sub claim in JWT")]
+    MissingSub,
+
+    #[error("Invalid claim value")]
+    InvalidClaim(String),
 }
