@@ -4,10 +4,13 @@ use rocket::{
     serde::{json::Json, Deserialize, Serialize},
 };
 use rocket_identity::{
-    auth::{hasher, UserRepository, Authenticated},
+    auth::{
+        hasher,
+        scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
+        User, UserRepository,
+    },
     config::Config,
     persistence::InMemoryRepository,
-    scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
     RocketExt,
 };
 
@@ -50,8 +53,8 @@ async fn login(
 }
 
 #[get("/")]
-fn index(auth: Authenticated) -> String {
-    format!("Hello, {}!", auth.user.username)
+fn index(user: User) -> String {
+    format!("Hello, {}!", user.username())
 }
 
 #[launch]
