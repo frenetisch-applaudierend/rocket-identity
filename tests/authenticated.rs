@@ -12,8 +12,8 @@ use rocket_identity::{
 };
 
 #[get("/authenticated")]
-fn handler(user: User) -> String {
-    user.username().to_owned()
+fn handler(user: &User) -> &str {
+    user.username()
 }
 
 #[catch(401)]

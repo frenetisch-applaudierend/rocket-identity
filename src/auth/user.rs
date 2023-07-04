@@ -49,13 +49,8 @@ impl User {
 
         Ok(())
     }
-}
 
-#[rocket::async_trait]
-impl<'r> rocket::request::FromRequest<'r> for User {
-    type Error = AuthenticationError;
-
-    async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
+    async fn create_from_request(req: &rocket::Request<'_>) -> Outcome<Self, AuthenticationError> {
         use rocket::outcome::Outcome::*;
 
         let missing_auth_policy = MissingAuthPolicy::Fail;
@@ -83,6 +78,23 @@ impl<'r> rocket::request::FromRequest<'r> for User {
                 Failure((Status::Unauthorized, AuthenticationError::Unauthenticated))
             }
             MissingAuthPolicy::Forward => Forward(()),
+        }
+    }
+}
+
+#[rocket::async_trait]
+impl<'r> rocket::request::FromRequest<'r> for &'r User {
+    type Error = AuthenticationError;
+
+    async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
+        let outcome = req
+            .local_cache_async(async move { User::create_from_request(req).await })
+            .await;
+
+        match outcome {
+            Outcome::Success(user) => Outcome::Success(user),
+            Outcome::Failure((status, err)) => Outcome::Failure((*status, err.clone())),
+            Outcome::Forward(()) => Outcome::Forward(()),
         }
     }
 }

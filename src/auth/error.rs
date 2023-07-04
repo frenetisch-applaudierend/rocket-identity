@@ -1,3 +1,5 @@
+use crate::util::AnyError;
+
 use super::scheme::AuthenticationError;
 
 #[derive(Debug, thiserror::Error)]
@@ -12,7 +14,7 @@ pub enum LoginError {
     IncorrectPassword,
 
     #[error("Some other error happened")]
-    Other(Box<dyn std::error::Error>),
+    Other(AnyError),
 }
 
 impl From<LoginError> for AuthenticationError {

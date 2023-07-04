@@ -9,7 +9,7 @@ use rocket_identity::{
 extern crate rocket;
 
 #[get("/")]
-fn index(user: User) -> String {
+fn index(user: &User) -> String {
     format!("Hello, {}!", user.username())
 }
 

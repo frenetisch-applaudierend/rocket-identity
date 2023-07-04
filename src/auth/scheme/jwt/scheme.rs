@@ -105,7 +105,7 @@ impl AuthenticationScheme for JwtBearer {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Clone, Debug, thiserror::Error)]
 pub enum JwtError {
     #[error("Missing sub claim in JWT")]
     MissingSub,

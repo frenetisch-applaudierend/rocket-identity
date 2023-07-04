@@ -53,7 +53,7 @@ async fn login(
 }
 
 #[get("/")]
-fn index(user: User) -> String {
+fn index(user: &User) -> String {
     format!("Hello, {}!", user.username())
 }
 
