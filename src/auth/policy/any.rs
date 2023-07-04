@@ -4,7 +4,7 @@ use crate::auth::{Policy, User};
 pub struct Any;
 
 impl Policy for Any {
-    fn evaluate(_user: &User<impl Policy>) -> bool {
+    fn evaluate(_user: &User) -> bool {
         true
     }
 }

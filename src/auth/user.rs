@@ -1,4 +1,6 @@
-use crate::auth::scheme::{AuthenticationSchemes, MissingAuthPolicy};
+use rocket::{http::Status, request::Outcome};
+
+use crate::auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy};
 
 use super::{scheme::AuthenticationError, Claims, Roles};
 
@@ -42,9 +44,7 @@ impl User {
 impl<'r> rocket::request::FromRequest<'r> for User {
     type Error = AuthenticationError;
 
-    async fn from_request(
-        req: &'r rocket::Request<'_>,
-    ) -> rocket::request::Outcome<Self, Self::Error> {
+    async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         use rocket::outcome::Outcome::*;
 
         let missing_auth_policy = MissingAuthPolicy::Fail;
@@ -56,11 +56,18 @@ impl<'r> rocket::request::FromRequest<'r> for User {
 
         let mut user = User::empty();
         for scheme in schemes.iter() {
-            match scheme.autenticate(&mut user, req).await {
+            match scheme.authenticate(&mut user, req).await {
                 Success(_) => return Success(user),
-                Failure(failure) => return (failure, missing_auth_policy).into(),
-                Forward(_) => (),
+                Failure(err) => return Outcome::from_err(err, missing_auth_policy),
+                Forward(_) => {}
             }
+        }
+
+        match missing_auth_policy {
+            MissingAuthPolicy::Fail => {
+                Failure((Status::Unauthorized, AuthenticationError::Unauthenticated))
+            }
+            MissingAuthPolicy::Forward => Forward(()),
         }
     }
 }

@@ -1,6 +1,6 @@
 use rocket::http::Status;
 
-use crate::auth::{Policy, User};
+use crate::auth::User;
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
@@ -14,7 +14,7 @@ pub trait AuthenticationScheme: Send + Sync {
     /// Try to authenticate a user. If the user is successfully authenticated, mutate the user with the correct values and return Success.
     /// If authentication was applicable but failed, return Failure with an appropriate HTTP status code and an error describing the problem.
     /// If authentication was not applicable, return Forward.
-    async fn authenticate(&self, user: &mut User<impl Policy>, req: &rocket::Request) -> Outcome;
+    async fn authenticate(&self, user: &mut User, req: &rocket::Request) -> Outcome;
 
     /// Return the header value of the WWW-Authenticate header for this authentication scheme.
     fn challenge_header(&self) -> String;
@@ -50,20 +50,28 @@ impl AuthenticationSchemes {
 /// When Failure is returned, a HTTP status code and an error must be specified.
 pub type Outcome = rocket::outcome::Outcome<(), AuthenticationError, ()>;
 
+pub(crate) trait FromAuthError {
+    fn from_err(err: AuthenticationError, policy: MissingAuthPolicy) -> Self;
+}
+
 /// Create an outcome from a given AuthenticationError and MissingAuthPolicy.
-impl From<(AuthenticationError, MissingAuthPolicy)> for rocket::request::Outcome {
-    fn from(config: (AuthenticationError, MissingAuthPolicy)) -> Self {
-        let (err, policy) = config;
+impl<T> FromAuthError for rocket::request::Outcome<T, AuthenticationError> {
+    fn from_err(err: AuthenticationError, policy: MissingAuthPolicy) -> Self {
         let status = match err {
             AuthenticationError::Unauthenticated => Status::Unauthorized,
             AuthenticationError::InvalidParams(_) => Status::BadRequest,
             AuthenticationError::Other(_) => Status::InternalServerError,
         };
 
-        if policy == MissingAuthPolicy::Forward && status == Status::Unauthorized {
-            Outcome::Forward(())
+        let should_forward = match policy {
+            MissingAuthPolicy::Fail => false,
+            MissingAuthPolicy::Forward => true,
+        };
+
+        if should_forward && status == Status::Unauthorized {
+            rocket::request::Outcome::Forward(())
         } else {
-            Outcome::Failure((status, err))
+            rocket::request::Outcome::Failure((status, err))
         }
     }
 }

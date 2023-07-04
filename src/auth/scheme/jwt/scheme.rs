@@ -1,12 +1,12 @@
 use std::collections::HashMap;
 
 use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
-use rocket::{http::Status, serde::json, Request};
+use rocket::{serde::json, Request};
 
 use crate::{
-    auth::scheme::{AuthenticationScheme, Outcome},
+    auth::scheme::{AuthenticationError, AuthenticationScheme, Outcome},
     auth::User,
-    util::Result,
+    util::Boxable,
 };
 
 use super::JwtConfig;
@@ -39,21 +39,23 @@ impl JwtBearer {
             .state::<JwtConfig>()
             .expect("Missing JwtConfig")
             .deconding_key;
-        
+
         let validation = Validation::new(Algorithm::HS256);
 
         let token = match decode::<HashMap<String, json::Value>>(token, key, &validation) {
             Ok(token) => token,
-            Err(err) => return Outcome::Failure((Status::BadRequest, Box::new(err))),
+            Err(err) => {
+                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+            }
         };
 
-        match Self::user_from_token(&token) {
-            Ok(user) => Outcome::Success(user),
-            Err(err) => Outcome::Failure((Status::BadRequest, err)),
+        match Self::fill_user_from_token(user, &token) {
+            Ok(user) => Outcome::Success(()),
+            Err(err) => Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed()))),
         }
     }
 
-    fn fill_user_from_token(user: &mut User, token: &ParsedToken) -> Result<()> {
+    fn fill_user_from_token(user: &mut User, token: &ParsedToken) -> Result<(), JwtError> {
         let username = token
             .claims
             .get("sub")

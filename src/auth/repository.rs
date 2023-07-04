@@ -5,7 +5,7 @@ use rocket::{
 
 use crate::persistence::{self, UserStore};
 
-use super::{hasher::PasswordHasher, error::LoginError, User};
+use super::{error::LoginError, hasher::PasswordHasher, User};
 
 pub struct UserRepository<'a> {
     repository: &'a dyn UserStore,
@@ -36,10 +36,13 @@ impl<'a> UserRepository<'a> {
     }
 
     fn user_from_repo(repo_user: &persistence::User) -> User {
-        User {
-            id: repo_user.id.clone(),
-            username: repo_user.username.clone(),
-        }
+        let mut user = User::empty();
+        user.id = repo_user.id.clone();
+        user.username = repo_user.username.clone();
+
+        // TODO: Fill claims and roles
+
+        user
     }
 }
 
