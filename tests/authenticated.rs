@@ -5,16 +5,15 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{hasher::insecure::IdentityPasswordHasher, Authenticated},
+    auth::{hasher::insecure::IdentityPasswordHasher, scheme::basic::Basic, User},
     config::Config,
     persistence::InMemoryRepository,
-    scheme::basic::Basic,
     RocketExt,
 };
 
 #[get("/authenticated")]
-fn handler(auth: Authenticated) -> String {
-    auth.user.username
+fn handler(user: User) -> String {
+    user.username().to_owned()
 }
 
 #[catch(401)]
@@ -30,10 +29,7 @@ fn setup() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
-        .add_identity(
-            Config::new(repository, hasher)
-                .add_scheme(Basic::new("Server")),
-        )
+        .add_identity(Config::new(repository, hasher).add_scheme(Basic::new("Server")))
 }
 
 #[test]
