@@ -1,8 +1,7 @@
 use rocket_identity::{
-    auth::{hasher, Authenticated},
+    auth::{hasher, scheme::basic::Basic, User},
     config::Config,
     persistence::InMemoryRepository,
-    scheme::basic::Basic,
     RocketExt,
 };
 
@@ -10,8 +9,8 @@ use rocket_identity::{
 extern crate rocket;
 
 #[get("/")]
-fn index(auth: Authenticated) -> String {
-    format!("Hello, {}!", auth.user.username)
+fn index(user: User) -> String {
+    format!("Hello, {}!", user.username())
 }
 
 #[launch]
