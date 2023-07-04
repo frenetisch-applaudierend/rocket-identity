@@ -30,7 +30,7 @@ impl rocket::fairing::Fairing for Challenger {
         for scheme in auth_schemes.iter() {
             res.adjoin_header(rocket::http::Header::new(
                 "WWW-Authenticate",
-                scheme.challenge(),
+                scheme.challenge_header(),
             ));
         }
     }

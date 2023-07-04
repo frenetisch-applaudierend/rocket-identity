@@ -1,11 +1,9 @@
-use scheme::AuthenticationSchemes;
-
 pub mod auth;
 pub mod config;
 pub mod persistence;
-pub mod policy;
-pub mod scheme;
 pub mod util;
+
+use auth::scheme::AuthenticationSchemes;
 
 pub trait RocketExt {
     fn add_identity(self, config: config::Config) -> Self;
@@ -24,6 +22,6 @@ impl RocketExt for rocket::Rocket<rocket::Build> {
         self.manage(user_repository)
             .manage(password_hasher)
             .manage(auth_schemes)
-            .attach(scheme::challenger::Challenger)
+            .attach(auth::scheme::challenger::Challenger)
     }
 }

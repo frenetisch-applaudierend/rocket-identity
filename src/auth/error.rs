@@ -1,6 +1,6 @@
-use thiserror::Error;
+use super::scheme::AuthenticationError;
 
-#[derive(Error, Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum LoginError {
     #[error("The user could not be found")]
     UserNotFound,
@@ -15,14 +15,13 @@ pub enum LoginError {
     Other(Box<dyn std::error::Error>),
 }
 
-#[derive(Error, Debug)]
-pub enum AuthorizationError {
-    #[error("The user is not authenticated")]
-    Unauthenticated,
-
-    #[error("The user is authenticated but has not passed the policy")]
-    PolicyFailed,
-
-    #[error("Some other error happened")]
-    Other(Box<dyn std::error::Error>),
+impl From<LoginError> for AuthenticationError {
+    fn from(err: LoginError) -> Self {
+        match err {
+            LoginError::UserNotFound => AuthenticationError::Unauthenticated,
+            LoginError::MissingPassword => AuthenticationError::Unauthenticated,
+            LoginError::IncorrectPassword => AuthenticationError::Unauthenticated,
+            LoginError::Other(err) => AuthenticationError::Other(Some(err)),
+        }
+    }
 }

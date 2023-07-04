@@ -5,7 +5,7 @@ use rocket::{
 
 use crate::persistence::{self, UserStore};
 
-use super::{hasher::PasswordHasher, LoginError, User};
+use super::{hasher::PasswordHasher, error::LoginError, User};
 
 pub struct UserRepository<'a> {
     repository: &'a dyn UserStore,

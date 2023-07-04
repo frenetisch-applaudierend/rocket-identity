@@ -1,4 +1,6 @@
-use crate::{auth::hasher::PasswordHasher, persistence::UserStore, scheme::AuthenticationScheme};
+use crate::{
+    auth::hasher::PasswordHasher, auth::scheme::AuthenticationScheme, persistence::UserStore,
+};
 
 pub struct Config {
     pub user_repository: Box<dyn UserStore>,
