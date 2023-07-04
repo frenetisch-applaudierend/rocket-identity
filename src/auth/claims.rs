@@ -15,6 +15,14 @@ impl Claims {
         }
     }
 
+    pub(crate) fn from_inner(claims: HashMap<String, ClaimValue>) -> Self {
+        Self { claims }
+    }
+
+    pub(crate) fn into_inner(self) -> HashMap<String, ClaimValue> {
+        self.claims
+    }
+
     /// Add a claim to the Claims object
     pub fn add_claim(&mut self, name: &str, value: ClaimValue) {
         self.claims.insert(name.to_string(), value);

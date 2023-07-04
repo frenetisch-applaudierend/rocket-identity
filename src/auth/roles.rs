@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Default, Clone)]
 pub struct Roles {
     pub roles: HashSet<String>,
 }
@@ -10,6 +10,14 @@ impl Roles {
         Self {
             roles: HashSet::new(),
         }
+    }
+
+    pub(crate) fn from_inner(roles: HashSet<String>) -> Self {
+        Self { roles }
+    }
+
+    pub(crate) fn into_inner(self) -> HashSet<String> {
+        self.roles
     }
 
     pub fn add_role(&mut self, role: &str) {

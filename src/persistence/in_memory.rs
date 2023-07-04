@@ -1,6 +1,6 @@
 use super::{User, UserStore};
 use crate::{
-    auth::{self, hasher::PasswordHasher},
+    auth::{hasher::PasswordHasher, UserData},
     util::Result,
 };
 
@@ -15,20 +15,19 @@ impl InMemoryRepository {
 
     pub fn add_user(&mut self, username: &str, password: &str, hasher: &dyn PasswordHasher) {
         let id = (self.users.len() + 1).to_string();
-        let auth_user = auth::User {
+
+        let user_data = UserData {
             id: id.clone(),
             username: username.to_string(),
+            claims: Default::default(),
+            roles: Default::default(),
         };
 
         let password_hash = hasher
-            .hash_password(&auth_user, password)
+            .hash_password(&user_data, password)
             .expect("Could not hash password");
 
-        let repo_user = User {
-            id,
-            username: username.to_string(),
-            password_hash: Some(password_hash),
-        };
+        let repo_user = User::from_data(user_data, Some(password_hash));
 
         self.users.push(repo_user);
     }

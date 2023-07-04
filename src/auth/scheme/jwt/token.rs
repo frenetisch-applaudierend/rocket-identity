@@ -23,7 +23,7 @@ impl<'r> JwtTokenProvider<'r> {
     pub fn generate_token(&self, user: &User) -> Result<JwtToken> {
         let now = OffsetDateTime::now_utc();
         let claims = Claims {
-            sub: user.username.to_string(),
+            sub: user.username().to_string(),
             nbf: now.into(),
             iat: now.into(),
             exp: (now + Duration::days(180)).into(),

@@ -2,29 +2,40 @@ use rocket::{http::Status, request::Outcome};
 
 use crate::auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy};
 
-use super::{scheme::AuthenticationError, Claims, Roles};
+use super::{scheme::AuthenticationError, Claims, Roles, UserData};
 
 #[derive(Debug)]
 pub struct User {
-    pub id: String,
-    pub username: String,
-    pub claims: Claims,
-    pub roles: Roles,
-
-    _make_private: (),
+    id: String,
+    username: String,
+    claims: Claims,
+    roles: Roles,
 }
 
 impl User {
-    /// Create a new user without any values set.
-    pub(crate) fn empty() -> Self {
+    pub(crate) fn from_data(user_data: UserData) -> Self {
         Self {
-            id: String::new(),
-            username: String::new(),
-            claims: Claims::new(),
-            roles: Roles::new(),
-
-            _make_private: (),
+            id: user_data.id,
+            username: user_data.username,
+            claims: user_data.claims,
+            roles: user_data.roles,
         }
+    }
+
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
+    pub fn username(&self) -> &str {
+        &self.username
+    }
+
+    pub fn claims(&self) -> &Claims {
+        &self.claims
+    }
+
+    pub fn roles(&self) -> &Roles {
+        &self.roles
     }
 
     pub fn validate(&self) -> Result<(), UserValidationError> {
@@ -54,10 +65,14 @@ impl<'r> rocket::request::FromRequest<'r> for User {
             .state::<AuthenticationSchemes>()
             .expect("Missing required AuthenticationSchemeCollection");
 
-        let mut user = User::empty();
         for scheme in schemes.iter() {
-            match scheme.authenticate(&mut user, req).await {
-                Success(_) => return Success(user),
+            match scheme.authenticate(req).await {
+                Success(user) => {
+                    user.validate()
+                        .expect("Scheme created an invalid user. This is a programming error.");
+
+                    return Success(user);
+                }
                 Failure(err) => return Outcome::from_err(err, missing_auth_policy),
                 Forward(_) => {}
             }

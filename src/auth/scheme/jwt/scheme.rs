@@ -3,11 +3,7 @@ use std::collections::HashMap;
 use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
 use rocket::{serde::json, Request};
 
-use crate::{
-    auth::scheme::{AuthenticationError, AuthenticationScheme, Outcome},
-    auth::User,
-    util::Boxable,
-};
+use crate::{auth::scheme::prelude::*, util::Boxable};
 
 use super::JwtConfig;
 
@@ -18,6 +14,26 @@ pub struct JwtBearer {
 
 type ParsedToken = TokenData<HashMap<String, json::Value>>;
 
+impl TryFrom<&ParsedToken> for UserData {
+    type Error = JwtError;
+
+    fn try_from(value: &ParsedToken) -> Result<Self, Self::Error> {
+        let username = value
+            .claims
+            .get("sub")
+            .ok_or(JwtError::MissingSub)?
+            .as_str()
+            .ok_or(JwtError::InvalidClaim("sub".to_owned()))?;
+
+        Ok(UserData {
+            id: username.to_owned(),
+            username: username.to_owned(),
+            claims: Claims::new(),
+            roles: Roles::new(),
+        })
+    }
+}
+
 impl JwtBearer {
     pub fn new(config: JwtConfig) -> Self {
         Self {
@@ -26,7 +42,7 @@ impl JwtBearer {
         }
     }
 
-    async fn authenticate_with_header(header: &str, user: &mut User, req: &Request<'_>) -> Outcome {
+    async fn authenticate_with_header(header: &str, req: &Request<'_>) -> Outcome {
         // We expect a Bearer scheme
         let Some(token) = header.strip_prefix("Bearer ") else {
             return Outcome::Forward(());
@@ -49,24 +65,15 @@ impl JwtBearer {
             }
         };
 
-        match Self::fill_user_from_token(user, &token) {
-            Ok(user) => Outcome::Success(()),
-            Err(err) => Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed()))),
-        }
-    }
+        let user = match UserData::try_from(&token) {
+            Ok(user) => user,
+            Err(err) => {
+                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+            }
+        };
 
-    fn fill_user_from_token(user: &mut User, token: &ParsedToken) -> Result<(), JwtError> {
-        let username = token
-            .claims
-            .get("sub")
-            .ok_or(JwtError::MissingSub)?
-            .as_str()
-            .ok_or(JwtError::InvalidClaim("sub".to_owned()))?;
-
-        user.id = username.to_owned();
-        user.username = username.to_owned();
-
-        Ok(())
+        let repository = req.user_repository().await;
+        Outcome::Success(repository.user_from_data(user))
     }
 }
 
@@ -80,10 +87,10 @@ impl AuthenticationScheme for JwtBearer {
         )
     }
 
-    async fn authenticate(&self, user: &mut User, req: &rocket::Request) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
         for header in req.headers().get("Authorization") {
-            match (Self::authenticate_with_header(header, user, req)).await {
-                Outcome::Success(()) => return Outcome::Success(()),
+            match (Self::authenticate_with_header(header, req)).await {
+                Outcome::Success(user) => return Outcome::Success(user),
                 Outcome::Failure(err) => return Outcome::Failure(err),
                 Outcome::Forward(()) => {}
             }
@@ -99,7 +106,7 @@ impl AuthenticationScheme for JwtBearer {
 }
 
 #[derive(Debug, thiserror::Error)]
-enum JwtError {
+pub enum JwtError {
     #[error("Missing sub claim in JWT")]
     MissingSub,
 

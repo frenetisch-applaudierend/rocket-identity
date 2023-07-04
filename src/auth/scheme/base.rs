@@ -14,7 +14,7 @@ pub trait AuthenticationScheme: Send + Sync {
     /// Try to authenticate a user. If the user is successfully authenticated, mutate the user with the correct values and return Success.
     /// If authentication was applicable but failed, return Failure with an appropriate HTTP status code and an error describing the problem.
     /// If authentication was not applicable, return Forward.
-    async fn authenticate(&self, user: &mut User, req: &rocket::Request) -> Outcome;
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome;
 
     /// Return the header value of the WWW-Authenticate header for this authentication scheme.
     fn challenge_header(&self) -> String;
@@ -48,7 +48,7 @@ impl AuthenticationSchemes {
 /// and a different scheme should be tried.
 ///
 /// When Failure is returned, a HTTP status code and an error must be specified.
-pub type Outcome = rocket::outcome::Outcome<(), AuthenticationError, ()>;
+pub type Outcome = rocket::outcome::Outcome<User, AuthenticationError, ()>;
 
 pub(crate) trait FromAuthError {
     fn from_err(err: AuthenticationError, policy: MissingAuthPolicy) -> Self;

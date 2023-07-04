@@ -1,12 +1,9 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::Request;
 
-use crate::{
-    auth::{User, UserRepository},
-    util::Boxable,
-};
+use crate::util::Boxable;
 
-use super::{AuthenticationError, AuthenticationScheme, Outcome};
+use super::prelude::*;
 
 pub struct Basic {
     challenge: String,
@@ -19,7 +16,7 @@ impl Basic {
         }
     }
 
-    async fn authenticate_with_header(header: &str, user: &mut User, req: &Request<'_>) -> Outcome {
+    async fn authenticate_with_header(header: &str, req: &Request<'_>) -> Outcome {
         // We expect a Basic scheme
         let Some(credentials) = header.strip_prefix("Basic ") else {
             return Outcome::Forward(());
@@ -45,26 +42,21 @@ impl Basic {
             return Outcome::Failure(AuthenticationError::Unauthenticated);
         };
 
-        let authenticator = req
-            .guard::<UserRepository>()
-            .await
-            .expect("Authenticator should never fail");
+        let repository = req.user_repository().await;
 
-        *user = match authenticator.login(username, pass).await {
-            Ok(user) => user,
+        match repository.login(username, pass).await {
+            Ok(user) => Outcome::Success(user),
             Err(err) => return Outcome::Failure(err.into()),
-        };
-
-        Outcome::Success(())
+        }
     }
 }
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Basic {
-    async fn authenticate(&self, user: &mut User, req: &rocket::Request) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
         for header in req.headers().get("Authorization") {
-            match (Basic::authenticate_with_header(header, user, req)).await {
-                Outcome::Success(()) => return Outcome::Success(()),
+            match (Basic::authenticate_with_header(header, req)).await {
+                Outcome::Success(user) => return Outcome::Success(user),
                 Outcome::Failure(err) => return Outcome::Failure(err),
                 Outcome::Forward(()) => {}
             };
