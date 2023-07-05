@@ -27,5 +27,3 @@ Authorization: Bearer {{token}}
 
 GET http://localhost:8000/admin
 Authorization: Bearer {{token}}
-
-```
