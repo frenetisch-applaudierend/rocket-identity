@@ -1,7 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
-use rocket::{serde::json, Request};
+use rocket::{
+    serde::json::{self, Value},
+    Request,
+};
 
 use crate::{auth::scheme::prelude::*, util::Boxable};
 
@@ -18,20 +21,48 @@ impl TryFrom<&ParsedToken> for UserData {
     type Error = JwtError;
 
     fn try_from(value: &ParsedToken) -> Result<Self, Self::Error> {
-        let username = value
-            .claims
-            .get("sub")
-            .ok_or(JwtError::MissingSub)?
-            .as_str()
-            .ok_or(JwtError::InvalidClaim("sub".to_owned()))?;
+        let token_claims = &value.claims;
+        let username = read_sub(token_claims)?;
+        let roles = read_roles(token_claims)?;
 
         Ok(UserData {
-            id: username.to_owned(),
-            username: username.to_owned(),
+            id: username.clone(),
+            username: username,
             claims: Claims::new(),
-            roles: Roles::new(),
+            roles,
         })
     }
+}
+
+fn read_sub(token_claims: &HashMap<String, Value>) -> Result<String, JwtError> {
+    token_claims
+        .get("sub")
+        .ok_or(JwtError::MissingSub)?
+        .as_str()
+        .ok_or(JwtError::InvalidClaim("sub".to_owned()))
+        .map(|s| s.to_owned())
+}
+
+fn read_roles(token_claims: &HashMap<String, Value>) -> Result<Roles, JwtError> {
+    let Some(roles) = token_claims.get("roles") else {
+        return Ok(Roles::new())
+    };
+
+    let roles = roles
+        .as_array()
+        .ok_or(JwtError::InvalidClaim("roles".to_owned()))?;
+
+    let roles = roles
+        .iter()
+        .map(|role| {
+            role.as_str()
+                .map_or(Err(JwtError::InvalidClaim("roles".to_owned())), |r| {
+                    Ok(r.to_owned())
+                })
+        })
+        .collect::<Result<HashSet<_>, _>>()?;
+
+    Ok(Roles::from_inner(roles))
 }
 
 impl JwtBearer {

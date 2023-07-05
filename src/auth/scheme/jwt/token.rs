@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use jsonwebtoken::{encode, EncodingKey, Header};
 use rocket::{
     request::{FromRequest, Outcome},
@@ -22,11 +24,16 @@ pub struct JwtTokenProvider<'r> {
 impl<'r> JwtTokenProvider<'r> {
     pub fn generate_token(&self, user: &User) -> Result<JwtToken> {
         let now = OffsetDateTime::now_utc();
+
+        let mut other = HashMap::new();
+        other.insert("roles".to_string(), user.roles().iter().collect());
+        
         let claims = Claims {
             sub: user.username().to_string(),
             nbf: now.into(),
             iat: now.into(),
             exp: (now + Duration::days(180)).into(),
+            other,
         };
 
         let token = encode(&Header::default(), &claims, self.key)?;

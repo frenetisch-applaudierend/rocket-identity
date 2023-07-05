@@ -1,5 +1,7 @@
+use std::collections::HashMap;
+
 use rocket::{
-    serde::{de::Visitor, Deserialize, Serialize},
+    serde::{de::Visitor, json::Value, Deserialize, Serialize},
     time::{error, OffsetDateTime},
 };
 
@@ -10,6 +12,16 @@ pub struct Claims {
     pub nbf: NumericDate,
     pub iat: NumericDate,
     pub exp: NumericDate,
+
+    #[serde(flatten)]
+    pub other: HashMap<String, Value>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(crate = "rocket::serde")]
+pub struct Entitlement {
+    pub name: String,
+    pub value: Value,
 }
 
 #[derive(Debug, Clone)]

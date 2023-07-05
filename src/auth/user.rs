@@ -36,7 +36,7 @@ impl User {
 
     pub fn roles(&self) -> &Roles {
         &self.roles
-    }
+    } 
 
     pub fn validate(&self) -> Result<(), UserValidationError> {
         if self.id.is_empty() {

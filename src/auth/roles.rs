@@ -12,6 +12,14 @@ impl Roles {
         }
     }
 
+    pub fn from_inner(roles: HashSet<String>) -> Self {
+        Self { roles }
+    }
+
+    pub fn into_inner(self) -> HashSet<String> {
+        self.roles
+    }
+
     pub fn add(&mut self, role: &str) {
         self.roles.insert(role.into());
     }
@@ -23,14 +31,9 @@ impl Roles {
     pub fn contains(&self, role: &str) -> bool {
         self.roles.contains(role)
     }
-}
 
-impl Roles {
-    pub(crate) fn from_inner(roles: HashSet<String>) -> Self {
-        Self { roles }
-    }
-
-    pub(crate) fn into_inner(self) -> HashSet<String> {
-        self.roles
+    pub fn iter(&self) -> impl Iterator<Item = &str>{
+        self.roles.iter().map(|s| s.as_str())
     }
 }
+
