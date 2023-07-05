@@ -2,7 +2,7 @@ use rocket::{http::Status, request::Outcome};
 
 use crate::auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy};
 
-use super::{scheme::AuthenticationError, Claims, Roles, UserData};
+use super::{scheme::AuthenticationError, Authorization, Claims, Policy, Roles, UserData};
 
 #[derive(Debug)]
 pub struct User {
@@ -48,6 +48,14 @@ impl User {
         }
 
         Ok(())
+    }
+
+    pub fn authorize<P: Policy>(&self) -> Option<Authorization<P>> {
+        if P::evaluate(self) {
+            Some(Authorization::new())
+        } else {
+            None
+        }
     }
 
     async fn create_from_request(req: &rocket::Request<'_>) -> Outcome<Self, AuthenticationError> {

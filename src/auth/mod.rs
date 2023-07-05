@@ -1,14 +1,15 @@
+mod authorization;
 mod claims;
 mod repository;
 mod roles;
 mod user;
 mod user_data;
 
-pub mod error;
 pub mod hasher;
 pub mod policy;
 pub mod scheme;
 
+pub use authorization::*;
 pub use claims::*;
 pub use repository::*;
 pub use roles::*;

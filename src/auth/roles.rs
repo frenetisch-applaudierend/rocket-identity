@@ -12,23 +12,25 @@ impl Roles {
         }
     }
 
+    pub fn add(&mut self, role: &str) {
+        self.roles.insert(role.into());
+    }
+
+    pub fn remove(&mut self, role: &str) {
+        self.roles.remove(role);
+    }
+
+    pub fn contains(&self, role: &str) -> bool {
+        self.roles.contains(role)
+    }
+}
+
+impl Roles {
     pub(crate) fn from_inner(roles: HashSet<String>) -> Self {
         Self { roles }
     }
 
     pub(crate) fn into_inner(self) -> HashSet<String> {
         self.roles
-    }
-
-    pub fn add_role(&mut self, role: &str) {
-        self.roles.insert(role.into());
-    }
-
-    pub fn remove_role(&mut self, role: &str) {
-        self.roles.remove(role);
-    }
-
-    pub fn has_role(&self, role: &str) -> bool {
-        self.roles.contains(role)
     }
 }

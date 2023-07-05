@@ -7,7 +7,7 @@ use rocket_identity::{
     auth::{
         hasher,
         scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-        User, UserRepository,
+        User, UserRepository, Authorization, Policy,
     },
     config::Config,
     persistence::InMemoryRepository,
@@ -29,6 +29,14 @@ struct LoginRequest {
 struct LoginResponse {
     username: String,
     token: JwtToken,
+}
+
+struct Admin;
+
+impl Policy for Admin {
+    fn evaluate(user: &User) -> bool {
+        user.roles().contains("admin")
+    }
 }
 
 #[post("/login", format = "application/json", data = "<body>")]
@@ -57,6 +65,11 @@ fn index(user: &User) -> String {
     format!("Hello, {}!", user.username())
 }
 
+#[get("/admin")]
+fn admin(user: &User, _admin: Authorization<Admin>) -> String {
+    format!("Hello, Admin {}!", user.username())
+}
+
 #[launch]
 fn rocket() -> _ {
     // Create a password hasher. In a real app you'd use hasher::default(<salt>) or
@@ -66,7 +79,10 @@ fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
     // that actually persists users
     let mut repository = InMemoryRepository::new();
-    repository.add_user("user1", "pass1", &hasher);
+    repository.add_user("user1", "pass1", &hasher, |_| {});
+    repository.add_user("admin", "admin", &hasher, |u| {
+        u.roles.add("admin");
+    });
 
     // This should be read from configuration
     let secret = b"My Secret";
@@ -76,6 +92,6 @@ fn rocket() -> _ {
     };
 
     rocket::build()
-        .mount("/", routes![login, index])
+        .mount("/", routes![login, index, admin])
         .add_identity(Config::new(repository, hasher).add_scheme(JwtBearer::new(jwt_config)))
 }

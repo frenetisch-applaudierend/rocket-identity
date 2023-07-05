@@ -1,6 +1,6 @@
 use rocket::http::Status;
 
-use crate::{auth::User, util::AnyError};
+use crate::{auth::User, util::DynError};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
@@ -83,10 +83,10 @@ pub enum AuthenticationError {
     Unauthenticated,
 
     #[error("The supplied authentication parameters are not valid")]
-    InvalidParams(Option<AnyError>),
+    InvalidParams(Option<DynError>),
 
     #[error("Some other error happened")]
-    Other(Option<AnyError>),
+    Other(Option<DynError>),
 }
 
 impl Clone for AuthenticationError {

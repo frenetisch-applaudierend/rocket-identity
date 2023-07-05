@@ -15,32 +15,36 @@ impl Claims {
         }
     }
 
-    pub(crate) fn from_inner(claims: HashMap<String, ClaimValue>) -> Self {
-        Self { claims }
-    }
-
-    pub(crate) fn into_inner(self) -> HashMap<String, ClaimValue> {
-        self.claims
-    }
-
     /// Add a claim to the Claims object
-    pub fn add_claim(&mut self, name: &str, value: ClaimValue) {
+    pub fn add(&mut self, name: &str, value: ClaimValue) {
         self.claims.insert(name.to_string(), value);
     }
 
     /// Remove a claim from the Claims object
-    pub fn remove_claim(&mut self, name: &str) {
+    pub fn remove(&mut self, name: &str) {
         self.claims.remove(name);
     }
 
     /// Get a claim from the Claims object
-    pub fn get_claim(&self, name: &str) -> Option<&ClaimValue> {
+    pub fn get(&self, name: &str) -> Option<&ClaimValue> {
         self.claims.get(name)
     }
 
     /// Checks if the Claims object contains a claim
-    pub fn has_claim(&self, name: &str) -> bool {
+    pub fn contains(&self, name: &str) -> bool {
         self.claims.contains_key(name)
+    }
+}
+
+impl Claims {
+    /// Create a new Claims object from a HashMap.
+    pub(crate) fn from_inner(claims: HashMap<String, ClaimValue>) -> Self {
+        Self { claims }
+    }
+
+    /// Get the inner HashMap from the Claims object.
+    pub(crate) fn into_inner(self) -> HashMap<String, ClaimValue> {
+        self.claims
     }
 }
 

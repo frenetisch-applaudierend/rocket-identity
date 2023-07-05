@@ -13,15 +13,16 @@ impl InMemoryRepository {
         Self { users: Vec::new() }
     }
 
-    pub fn add_user(&mut self, username: &str, password: &str, hasher: &dyn PasswordHasher) {
+    pub fn add_user(&mut self, username: &str, password: &str, hasher: &dyn PasswordHasher, configure: impl FnOnce(&mut UserData) -> ()) {
         let id = (self.users.len() + 1).to_string();
 
-        let user_data = UserData {
+        let mut user_data = UserData {
             id: id.clone(),
             username: username.to_string(),
             claims: Default::default(),
             roles: Default::default(),
         };
+        configure(&mut user_data);
 
         let password_hash = hasher
             .hash_password(&user_data, password)

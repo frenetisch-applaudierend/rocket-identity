@@ -24,7 +24,7 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 fn setup() -> Rocket<Build> {
     let hasher = IdentityPasswordHasher;
     let mut repository = InMemoryRepository::new();
-    repository.add_user("user1", "pass1", &hasher);
+    repository.add_user("user1", "pass1", &hasher, |_| {});
 
     rocket::build()
         .mount("/", routes![handler])

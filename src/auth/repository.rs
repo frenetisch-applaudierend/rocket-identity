@@ -3,9 +3,9 @@ use rocket::{
     Request,
 };
 
-use crate::persistence::UserStore;
+use crate::{persistence::UserStore, util::DynError};
 
-use super::{error::LoginError, hasher::PasswordHasher, Claims, Roles, User, UserData};
+use super::{hasher::PasswordHasher, scheme::AuthenticationError, Claims, Roles, User, UserData};
 
 pub struct UserRepository<'a> {
     store: &'a dyn UserStore,
@@ -76,5 +76,31 @@ pub trait UserRepositoryRequestExt {
 impl UserRepositoryRequestExt for Request<'_> {
     async fn user_repository(&self) -> UserRepository {
         self.guard().await.expect("Missing required UserRepository")
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum LoginError {
+    #[error("The user could not be found")]
+    UserNotFound,
+
+    #[error("The user could be found but has no password")]
+    MissingPassword,
+
+    #[error("The provided password does not match the users")]
+    IncorrectPassword,
+
+    #[error("Some other error happened")]
+    Other(DynError),
+}
+
+impl From<LoginError> for AuthenticationError {
+    fn from(err: LoginError) -> Self {
+        match err {
+            LoginError::UserNotFound => AuthenticationError::Unauthenticated,
+            LoginError::MissingPassword => AuthenticationError::Unauthenticated,
+            LoginError::IncorrectPassword => AuthenticationError::Unauthenticated,
+            LoginError::Other(err) => AuthenticationError::Other(Some(err)),
+        }
     }
 }

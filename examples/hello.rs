@@ -22,7 +22,7 @@ fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
     // that actually persists users
     let mut repository = InMemoryRepository::new();
-    repository.add_user("user1", "pass1", &hasher);
+    repository.add_user("user1", "pass1", &hasher, |_| {});
 
     rocket::build()
         .mount("/", routes![index])

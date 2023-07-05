@@ -1,3 +1,5 @@
+@token=<your token here>
+
 POST http://localhost:8000/login
 Content-Type: application/json
 
@@ -8,5 +10,22 @@ Content-Type: application/json
 
 ###
 
+POST http://localhost:8000/login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "admin"
+}
+
+###
+
 GET http://localhost:8000/
-Authorization: Bearer <your token here>
+Authorization: Bearer {{token}}
+
+###
+
+GET http://localhost:8000/admin
+Authorization: Bearer {{token}}
+
+```
