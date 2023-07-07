@@ -12,7 +12,6 @@ pub trait RocketExt {
 impl RocketExt for rocket::Rocket<rocket::Build> {
     fn add_identity(mut self, config: config::Config) -> Self {
         let user_repository = config.user_repository;
-        let password_hasher = config.password_hasher;
         let mut auth_schemes = AuthenticationSchemes::new(config.auth_schemes);
 
         for scheme in auth_schemes.iter_mut() {
@@ -20,7 +19,6 @@ impl RocketExt for rocket::Rocket<rocket::Build> {
         }
 
         self.manage(user_repository)
-            .manage(password_hasher)
             .manage(auth_schemes)
             .attach(auth::scheme::challenger::Challenger)
     }

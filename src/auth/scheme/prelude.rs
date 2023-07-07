@@ -1,4 +1,5 @@
-///! This module contains common imports for authentication schemes.
+//! This module contains common imports for authentication schemes.
+
 pub use super::AuthenticationError;
 pub use super::AuthenticationScheme;
 pub use super::Outcome;

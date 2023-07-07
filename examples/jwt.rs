@@ -7,7 +7,7 @@ use rocket_identity::{
     auth::{
         hasher,
         scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-        User, UserRepository, Authorization, Policy,
+        Authorization, Policy, User, UserRepository,
     },
     config::Config,
     persistence::InMemoryRepository,
@@ -41,7 +41,7 @@ impl Policy for Admin {
 
 #[post("/login", format = "application/json", data = "<body>")]
 async fn login(
-    users: UserRepository<'_>,
+    users: &dyn UserRepository,
     token_provider: JwtTokenProvider<'_>,
     body: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Unauthorized<()>> {

@@ -16,8 +16,9 @@ pub trait AuthenticationScheme: Send + Sync {
     /// If authentication was not applicable, return Forward.
     async fn authenticate(&self, req: &rocket::Request) -> Outcome;
 
-    /// Return the header value of the WWW-Authenticate header for this authentication scheme.
-    fn challenge_header(&self) -> String;
+    /// Add challenge information for the client to the response.
+    /// Usually by adding a WWW-Authenticate header for this authentication scheme.
+    async fn challenge(&self, res: &mut rocket::Response);
 }
 
 /// A collection of authentication schemes.

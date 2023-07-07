@@ -1,9 +1,8 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::Request;
 
+use crate::auth::scheme::prelude::*;
 use crate::util::Boxable;
-
-use super::prelude::*;
 
 pub struct Basic {
     challenge: String,
@@ -42,11 +41,11 @@ impl Basic {
             return Outcome::Failure(AuthenticationError::Unauthenticated);
         };
 
-        let repository = req.user_repository().await;
+        let repository = req.user_repository();
 
         match repository.login(username, pass).await {
             Ok(user) => Outcome::Success(user),
-            Err(err) => return Outcome::Failure(err.into()),
+            Err(err) => Outcome::Failure(err.into()),
         }
     }
 }
@@ -66,7 +65,10 @@ impl AuthenticationScheme for Basic {
         Outcome::Forward(())
     }
 
-    fn challenge_header(&self) -> String {
-        self.challenge.clone()
+    async fn challenge(&self, res: &mut rocket::Response) {
+        res.adjoin_header(rocket::http::Header::new(
+            "WWW-Authenticate",
+            self.challenge.clone(),
+        ));
     }
 }

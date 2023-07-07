@@ -1,12 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
 use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
-use rocket::{
-    serde::json::{self, Value},
-    Request,
-};
+use rocket::{serde::json::Value, Request};
 
-use crate::{auth::scheme::prelude::*, util::Boxable};
+use crate::auth::scheme::prelude::*;
+use crate::util::Boxable;
 
 use super::JwtConfig;
 
@@ -15,7 +13,7 @@ pub struct JwtBearer {
     config: Option<JwtConfig>,
 }
 
-type ParsedToken = TokenData<HashMap<String, json::Value>>;
+type ParsedToken = TokenData<HashMap<String, Value>>;
 
 impl TryFrom<&ParsedToken> for UserData {
     type Error = JwtError;
@@ -23,11 +21,12 @@ impl TryFrom<&ParsedToken> for UserData {
     fn try_from(value: &ParsedToken) -> Result<Self, Self::Error> {
         let token_claims = &value.claims;
         let username = read_sub(token_claims)?;
+        let id = username.clone();
         let roles = read_roles(token_claims)?;
 
         Ok(UserData {
-            id: username.clone(),
-            username: username,
+            id,
+            username,
             claims: Claims::new(),
             roles,
         })
@@ -89,7 +88,7 @@ impl JwtBearer {
 
         let validation = Validation::new(Algorithm::HS256);
 
-        let token = match decode::<HashMap<String, json::Value>>(token, key, &validation) {
+        let token = match decode::<HashMap<String, Value>>(token, key, &validation) {
             Ok(token) => token,
             Err(err) => {
                 return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
@@ -103,7 +102,7 @@ impl JwtBearer {
             }
         };
 
-        let repository = req.user_repository().await;
+        let repository = req.user_repository();
         Outcome::Success(repository.user_from_data(user))
     }
 }
@@ -131,8 +130,11 @@ impl AuthenticationScheme for JwtBearer {
         Outcome::Forward(())
     }
 
-    fn challenge_header(&self) -> String {
-        self.challenge.to_string()
+    async fn challenge(&self, res: &mut rocket::Response) {
+        res.adjoin_header(rocket::http::Header::new(
+            "WWW-Authenticate",
+            self.challenge,
+        ));
     }
 }
 

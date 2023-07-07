@@ -71,7 +71,7 @@ impl ClaimValue {
     /// Return the value as a String if it is a String, None otherwise.
     pub fn as_string(self) -> Option<String> {
         match self {
-            Self::String(s) => Some(s.clone()),
+            Self::String(s) => Some(s),
             _ => None,
         }
     }

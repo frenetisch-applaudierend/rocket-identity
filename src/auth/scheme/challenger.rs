@@ -28,10 +28,7 @@ impl rocket::fairing::Fairing for Challenger {
             .expect("Missing configuration");
 
         for scheme in auth_schemes.iter() {
-            res.adjoin_header(rocket::http::Header::new(
-                "WWW-Authenticate",
-                scheme.challenge_header(),
-            ));
+            scheme.challenge(res).await;
         }
     }
 }

@@ -1,19 +1,32 @@
-use rocket::{
-    request::{FromRequest, Outcome},
-    Request,
-};
+use rocket::{request::{FromRequest, Outcome}, Request};
 
 use crate::{persistence::UserStore, util::DynError};
 
 use super::{hasher::PasswordHasher, scheme::AuthenticationError, Claims, Roles, User, UserData};
 
-pub struct UserRepository<'a> {
-    store: &'a dyn UserStore,
-    hasher: &'a dyn PasswordHasher,
+#[rocket::async_trait]
+pub trait UserRepository: Sync + Send {
+    async fn login(&self, username: &str, password: &str) -> Result<User, LoginError>;
+
+    fn user_from_data(&self, user_data: UserData) -> User;
 }
 
-impl<'a> UserRepository<'a> {
-    pub async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
+pub(crate) struct DefaultUserRepository<S, H>
+where
+    S: UserStore,
+    H: PasswordHasher,
+{
+    pub store: S,
+    pub hasher: H,
+}
+
+#[rocket::async_trait]
+impl<S, H> UserRepository for DefaultUserRepository<S, H>
+where
+    S: UserStore,
+    H: PasswordHasher,
+{
+    async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let Some(repo_user) = self.store.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
             return Err(LoginError::UserNotFound);
         };
@@ -40,42 +53,30 @@ impl<'a> UserRepository<'a> {
         Ok(self.user_from_data(user_data))
     }
 
-    pub fn user_from_data(&self, user_data: UserData) -> User {
+    fn user_from_data(&self, user_data: UserData) -> User {
         User::from_data(user_data)
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for UserRepository<'r> {
+impl<'r> FromRequest<'r> for &'r dyn UserRepository {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        let store = req
-            .rocket()
-            .state::<Box<dyn UserStore>>()
-            .expect("Missing required UserRepository");
-
-        let hasher = req
-            .rocket()
-            .state::<Box<dyn PasswordHasher>>()
-            .expect("Missing required PasswordHasher");
-
-        Outcome::Success(UserRepository {
-            store: &**store,
-            hasher: &**hasher,
-        })
+        Outcome::Success(req.user_repository())
     }
 }
 
-#[rocket::async_trait]
 pub trait UserRepositoryRequestExt {
-    async fn user_repository(&self) -> UserRepository;
+    fn user_repository(&self) -> &dyn UserRepository;
 }
 
-#[rocket::async_trait]
-impl UserRepositoryRequestExt for Request<'_> {
-    async fn user_repository(&self) -> UserRepository {
-        self.guard().await.expect("Missing required UserRepository")
+impl<'r> UserRepositoryRequestExt for Request<'r> {
+    fn user_repository(&self) -> &dyn UserRepository {
+        self.rocket()
+            .state::<Box<dyn UserRepository>>()
+            .expect("Missing required UserRepository")
+            .as_ref()
     }
 }
 
