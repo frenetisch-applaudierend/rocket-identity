@@ -30,6 +30,11 @@ impl AuthenticationSchemes {
         Self(schemes)
     }
 
+    /// Check if the authentication scheme collection is empty.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
     /// Create an iterator over the authentication schemes.
     pub fn iter(&self) -> impl Iterator<Item = &dyn AuthenticationScheme> {
         self.0.iter().map(|b| &**b)

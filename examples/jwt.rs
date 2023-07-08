@@ -10,7 +10,7 @@ use rocket_identity::{
         Authorization, Policy, User, UserRepository,
     },
     config::Config,
-    persistence::InMemoryRepository,
+    persistence::InMemoryUserStore,
     RocketExt,
 };
 
@@ -78,7 +78,7 @@ fn rocket() -> _ {
 
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let mut repository = InMemoryRepository::new();
+    let mut repository = InMemoryUserStore::new();
     repository.add_user("user1", "pass1", &hasher, |_| {});
     repository.add_user("admin", "admin", &hasher, |u| {
         u.roles.add("admin");

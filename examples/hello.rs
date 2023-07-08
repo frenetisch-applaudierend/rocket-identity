@@ -1,7 +1,7 @@
 use rocket_identity::{
     auth::{hasher, scheme::basic::Basic, User},
     config::Config,
-    persistence::InMemoryRepository,
+    persistence::InMemoryUserStore,
     RocketExt,
 };
 
@@ -21,7 +21,7 @@ fn rocket() -> _ {
 
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let mut repository = InMemoryRepository::new();
+    let mut repository = InMemoryUserStore::new();
     repository.add_user("user1", "pass1", &hasher, |_| {});
 
     rocket::build()

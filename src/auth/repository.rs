@@ -16,8 +16,8 @@ where
     S: UserStore,
     H: PasswordHasher,
 {
-    pub store: S,
-    pub hasher: H,
+    pub user_store: S,
+    pub password_hasher: H,
 }
 
 #[rocket::async_trait]
@@ -27,7 +27,7 @@ where
     H: PasswordHasher,
 {
     async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
-        let Some(repo_user) = self.store.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
+        let Some(repo_user) = self.user_store.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
             return Err(LoginError::UserNotFound);
         };
 
@@ -43,7 +43,7 @@ where
         };
 
         if !self
-            .hasher
+            .password_hasher
             .verify_password(&user_data, &password_hash, password)
             .map_err(LoginError::Other)?
         {

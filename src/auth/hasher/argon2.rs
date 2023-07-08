@@ -5,8 +5,17 @@ use argon2::{
 
 use crate::{auth::UserData, util::Result};
 
+#[derive(Default, Clone)]
 pub struct Argon2PasswordHasher {
     ctx: argon2::Argon2<'static>,
+}
+
+impl Argon2PasswordHasher {
+    pub fn new() -> Self {
+        Self {
+            ctx: argon2::Argon2::default(),
+        }
+    }
 }
 
 impl super::PasswordHasher for Argon2PasswordHasher {

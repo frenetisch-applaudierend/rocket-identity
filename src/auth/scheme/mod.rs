@@ -4,6 +4,4 @@ pub mod cookie;
 pub mod jwt;
 pub mod prelude;
 
-pub(crate) mod challenger;
-
 pub use base::*;
