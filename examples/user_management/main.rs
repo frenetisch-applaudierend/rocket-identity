@@ -6,5 +6,5 @@ fn main() {
 }
 
 fn setup_identity_config() -> rocket_identity::config::Config {
-    
+    todo!()
 }

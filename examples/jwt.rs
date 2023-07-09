@@ -9,9 +9,9 @@ use rocket_identity::{
         scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
         Authorization, Policy, User, UserRepository,
     },
-    config::Config,
+    config::{Config, RocketIdentityInitializer},
     persistence::InMemoryUserStore,
-    RocketExt,
+    RocketExt, RocketIdentity,
 };
 
 #[macro_use]
@@ -78,9 +78,9 @@ fn rocket() -> _ {
 
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let mut repository = InMemoryUserStore::new();
-    repository.add_user("user1", "pass1", &hasher, |_| {});
-    repository.add_user("admin", "admin", &hasher, |u| {
+    let mut user_store = InMemoryUserStore::new();
+    user_store.add_user("user1", "pass1", &hasher, |_| {});
+    user_store.add_user("admin", "admin", &hasher, |u| {
         u.roles.add("admin");
     });
 
@@ -91,7 +91,18 @@ fn rocket() -> _ {
         deconding_key: DecodingKey::from_secret(secret),
     };
 
+    let config = Config::new(user_store).add_scheme(JwtBearer::new(jwt_config));
+
     rocket::build()
         .mount("/", routes![login, index, admin])
-        .add_identity(Config::new(repository, hasher).add_scheme(JwtBearer::new(jwt_config)))
+        .attach(RocketIdentity::fairing(config))
+}
+
+struct Initializer;
+
+#[rocket::async_trait]
+impl RocketIdentityInitializer for Initializer {
+    async fn initialize(&self, rocket: &rocket::Rocket<rocket::Orbit>) {
+        todo!()
+    }
 }
