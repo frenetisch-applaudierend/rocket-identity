@@ -1,6 +1,7 @@
 use rocket::http::Status;
+use user_builder::UserBuilder;
 
-use crate::{auth::User, util::DynError};
+use crate::{auth::{User, user_builder}, util::DynError};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
@@ -14,7 +15,7 @@ pub trait AuthenticationScheme: Send + Sync {
     /// Try to authenticate a user. If the user is successfully authenticated, mutate the user with the correct values and return Success.
     /// If authentication was applicable but failed, return Failure with an appropriate HTTP status code and an error describing the problem.
     /// If authentication was not applicable, return Forward.
-    async fn authenticate(&self, req: &rocket::Request) -> Outcome;
+    async fn authenticate(&self, req: &rocket::Request, user_builder: &UserBuilder) -> Outcome;
 
     /// Add challenge information for the client to the response.
     /// Usually by adding a WWW-Authenticate header for this authentication scheme.

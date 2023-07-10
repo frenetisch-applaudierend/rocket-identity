@@ -28,7 +28,7 @@ mod test {
         let hasher = super::IdentityPasswordHasher;
 
         let user = UserData {
-            id: "1".to_owned(),
+            id: None,
             username: "user1".to_owned(),
             claims: Default::default(),
             roles: Default::default(),
@@ -51,7 +51,7 @@ mod test {
         let hasher = super::IdentityPasswordHasher;
 
         let user = UserData {
-            id: "1".to_owned(),
+            id: None,
             username: "user1".to_owned(),
             claims: Default::default(),
             roles: Default::default(),

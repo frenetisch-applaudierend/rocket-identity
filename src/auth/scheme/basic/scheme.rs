@@ -52,7 +52,7 @@ impl Basic {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Basic {
-    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Basic::authenticate_with_header(header, req)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

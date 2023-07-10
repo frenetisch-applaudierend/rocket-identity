@@ -5,4 +5,4 @@ pub use super::AuthenticationScheme;
 pub use super::Outcome;
 
 pub use crate::auth::UserRepositoryRequestExt;
-pub use crate::auth::{ClaimValue, Claims, Policy, Roles, UserData};
+pub use crate::auth::{ClaimValue, Claims, Policy, Roles, UserBuilder, UserData, UserId};

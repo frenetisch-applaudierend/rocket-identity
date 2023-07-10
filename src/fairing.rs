@@ -1,20 +1,18 @@
 use rocket::{
     fairing::{self, Fairing, Info, Kind},
     http::Status,
-    Build, Orbit, Rocket,
+    Build, Rocket,
 };
+use tokio::sync::RwLock;
 
 use crate::{
-    auth::{
-        hasher::PasswordHasher, scheme::AuthenticationSchemes, DefaultUserRepository,
-        UserRepository,
-    },
+    auth::{hasher::PasswordHasher, scheme::AuthenticationSchemes, UserRepository},
     config::{Config, ConfigurationProvider},
     persistence::UserStore,
 };
 
 pub struct RocketIdentity<C: ConfigurationProvider> {
-    config: std::sync::RwLock<C>,
+    config: RwLock<C>,
 }
 
 impl<S, H> RocketIdentity<Config<S, H>>
@@ -24,7 +22,7 @@ where
 {
     pub fn fairing(config: Config<S, H>) -> Self {
         Self {
-            config: std::sync::RwLock::new(config),
+            config: RwLock::new(config),
         }
     }
 }
@@ -44,7 +42,7 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
         let mut config = self
             .config
             .write()
-            .expect("Configuration could not be obtained");
+            .await;
 
         // Load user store from config
         let Some(user_store) = config.user_store() else {
@@ -70,29 +68,10 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
         }
 
         // Create user repository
-        let user_repository: Box<dyn UserRepository> = Box::new(DefaultUserRepository {
-            user_store,
-            password_hasher,
-        });
+        let user_repository = UserRepository::new(user_store, password_hasher);
 
         // Add managed state and return rocket instance
         Ok(rocket.manage(user_repository).manage(auth_schemes))
-    }
-
-    /// On liftoff we call the initialization object if configured.
-    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
-        let initializer = {
-            let mut config = self
-                .config
-                .write()
-                .expect("Configuration could not be obtained");
-
-            config.initializer()
-        };
-
-        if let Some(initializer) = initializer {
-            initializer.initialize(rocket).await;
-        }
     }
 
     /// On response we check if the response was 401 Unauthorized and if so we add a

@@ -12,7 +12,7 @@ impl Cookie {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Cookie {
-    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
         let _repository = req.user_repository();
         let cookies = req.cookies();
 

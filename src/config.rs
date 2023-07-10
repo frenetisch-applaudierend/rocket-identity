@@ -12,12 +12,6 @@ where
     user_store: Option<S>,
     password_hasher: Option<H>,
     auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
-    initializer: Option<Box<dyn RocketIdentityInitializer>>,
-}
-
-#[rocket::async_trait]
-pub trait RocketIdentityInitializer: Send + Sync {
-    async fn initialize(&self, rocket: &rocket::Rocket<rocket::Orbit>);
 }
 
 pub trait ConfigurationProvider: Send + Sync {
@@ -29,8 +23,6 @@ pub trait ConfigurationProvider: Send + Sync {
     fn password_hasher(&mut self) -> Option<Self::PasswordHasher>;
 
     fn auth_schemes(&mut self) -> Vec<Box<dyn AuthenticationScheme>>;
-
-    fn initializer(&mut self) -> Option<Box<dyn RocketIdentityInitializer>>;
 }
 
 impl<S> Config<S, Argon2PasswordHasher>
@@ -42,7 +34,6 @@ where
             user_store: Some(user_store),
             password_hasher: Some(Argon2PasswordHasher::new()),
             auth_schemes: Vec::new(),
-            initializer: None,
         }
     }
 }
@@ -57,7 +48,6 @@ where
             user_store: Some(user_store),
             password_hasher: self.password_hasher,
             auth_schemes: self.auth_schemes,
-            initializer: self.initializer,
         }
     }
 
@@ -66,16 +56,6 @@ where
             user_store: self.user_store,
             password_hasher: Some(password_hasher),
             auth_schemes: self.auth_schemes,
-            initializer: self.initializer,
-        }
-    }
-
-    pub fn with_initializer(self, initializer: impl RocketIdentityInitializer + 'static) -> Self {
-        Self {
-            user_store: self.user_store,
-            password_hasher: self.password_hasher,
-            auth_schemes: self.auth_schemes,
-            initializer: Some(Box::new(initializer)),
         }
     }
 
@@ -104,20 +84,5 @@ where
 
     fn auth_schemes(&mut self) -> Vec<Box<dyn AuthenticationScheme>> {
         std::mem::take(&mut self.auth_schemes)
-    }
-
-    fn initializer(&mut self) -> Option<Box<dyn RocketIdentityInitializer>> {
-        self.initializer.take()
-    }
-}
-
-#[rocket::async_trait]
-impl<T, F> RocketIdentityInitializer for T
-where
-    T: Fn(&rocket::Rocket<rocket::Orbit>) -> F + Send + Sync + 'static,
-    F: std::future::Future<Output = ()> + Send + Sync + 'static,
-{
-    async fn initialize(&self, rocket: &rocket::Rocket<rocket::Orbit>) {
-        self(rocket);
     }
 }

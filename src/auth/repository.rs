@@ -1,33 +1,38 @@
-use rocket::{request::{FromRequest, Outcome}, Request};
+use tokio::sync::RwLock;
 
-use crate::{persistence::UserStore, util::DynError};
+use rocket::{
+    request::{FromRequest, Outcome},
+    Request,
+};
+
+use crate::{
+    auth,
+    persistence::{self, UserStore},
+    util::DynError,
+};
 
 use super::{hasher::PasswordHasher, scheme::AuthenticationError, Claims, Roles, User, UserData};
 
-#[rocket::async_trait]
-pub trait UserRepository: Sync + Send {
-    async fn login(&self, username: &str, password: &str) -> Result<User, LoginError>;
-
-    fn user_from_data(&self, user_data: UserData) -> User;
+pub struct UserRepository {
+    pub user_store: RwLock<Box<dyn UserStore>>,
+    pub password_hasher: Box<dyn PasswordHasher>,
 }
 
-pub(crate) struct DefaultUserRepository<S, H>
-where
-    S: UserStore,
-    H: PasswordHasher,
-{
-    pub user_store: S,
-    pub password_hasher: H,
-}
+impl UserRepository {
+    pub fn new(
+        user_store: impl UserStore + 'static,
+        password_hasher: impl PasswordHasher + 'static,
+    ) -> Self {
+        Self {
+            user_store: RwLock::new(Box::new(user_store)),
+            password_hasher: Box::new(password_hasher),
+        }
+    }
 
-#[rocket::async_trait]
-impl<S, H> UserRepository for DefaultUserRepository<S, H>
-where
-    S: UserStore,
-    H: PasswordHasher,
-{
-    async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
-        let Some(repo_user) = self.user_store.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
+    pub async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
+        let user_store = self.user_store.read().await;
+
+        let Some(repo_user) = user_store.find_user_by_username(username).await.map_err(|err| LoginError::Other(err))? else {
             return Err(LoginError::UserNotFound);
         };
 
@@ -50,16 +55,42 @@ where
             return Err(LoginError::IncorrectPassword);
         }
 
-        Ok(self.user_from_data(user_data))
+        Ok(auth::User::from_data(user_data))
     }
 
-    fn user_from_data(&self, user_data: UserData) -> User {
-        User::from_data(user_data)
+    pub async fn add_user(
+        &self,
+        data: UserData,
+        password: Option<&str>,
+    ) -> Result<User, AddUserError> {
+        let password_hash = password
+            .map(|p| {
+                self.password_hasher
+                    .hash_password(&data, p)
+                    .map_err(AddUserError::Other)
+            })
+            .transpose()?;
+
+        let user = persistence::User::from_data(data, password_hash);
+
+        let mut user_store = self.user_store.write().await;
+
+        let id = user_store
+            .add_user(&user)
+            .await
+            .map_err(AddUserError::Other)?;
+
+        Ok(auth::User::from_data(UserData {
+            id: Some(id),
+            username: user.username,
+            claims: Claims::from_inner(user.claims),
+            roles: Roles::from_inner(user.roles),
+        }))
     }
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for &'r dyn UserRepository {
+impl<'r> FromRequest<'r> for &'r UserRepository {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
@@ -68,15 +99,14 @@ impl<'r> FromRequest<'r> for &'r dyn UserRepository {
 }
 
 pub trait UserRepositoryRequestExt {
-    fn user_repository(&self) -> &dyn UserRepository;
+    fn user_repository(&self) -> &UserRepository;
 }
 
 impl<'r> UserRepositoryRequestExt for Request<'r> {
-    fn user_repository(&self) -> &dyn UserRepository {
+    fn user_repository(&self) -> &UserRepository {
         self.rocket()
-            .state::<Box<dyn UserRepository>>()
+            .state::<UserRepository>()
             .expect("Missing required UserRepository")
-            .as_ref()
     }
 }
 
@@ -91,6 +121,9 @@ pub enum LoginError {
     #[error("The provided password does not match the users")]
     IncorrectPassword,
 
+    #[error("Could not acquire read lock on user store")]
+    Lock,
+
     #[error("Some other error happened")]
     Other(DynError),
 }
@@ -101,7 +134,17 @@ impl From<LoginError> for AuthenticationError {
             LoginError::UserNotFound => AuthenticationError::Unauthenticated,
             LoginError::MissingPassword => AuthenticationError::Unauthenticated,
             LoginError::IncorrectPassword => AuthenticationError::Unauthenticated,
+            LoginError::Lock => AuthenticationError::Other(None),
             LoginError::Other(err) => AuthenticationError::Other(Some(err)),
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum AddUserError {
+    #[error("Could not acquire write lock on user store")]
+    Lock,
+
+    #[error("Some other error happened")]
+    Other(DynError),
 }

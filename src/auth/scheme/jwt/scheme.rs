@@ -21,11 +21,11 @@ impl TryFrom<&ParsedToken> for UserData {
     fn try_from(value: &ParsedToken) -> Result<Self, Self::Error> {
         let token_claims = &value.claims;
         let username = read_sub(token_claims)?;
-        let id = username.clone();
+        let id = UserId::try_from(username.clone()).expect("sub must not be empty");
         let roles = read_roles(token_claims)?;
 
         Ok(UserData {
-            id,
+            id: Some(id),
             username,
             claims: Claims::new(),
             roles,
@@ -34,12 +34,18 @@ impl TryFrom<&ParsedToken> for UserData {
 }
 
 fn read_sub(token_claims: &HashMap<String, Value>) -> Result<String, JwtError> {
-    token_claims
+    let sub = token_claims
         .get("sub")
         .ok_or(JwtError::MissingSub)?
         .as_str()
         .ok_or(JwtError::InvalidClaim("sub".to_owned()))
-        .map(|s| s.to_owned())
+        .map(|s| s.to_owned())?;
+
+    if sub.is_empty() {
+        return Err(JwtError::InvalidClaim("sub".to_owned()));
+    }
+
+    Ok(sub)
 }
 
 fn read_roles(token_claims: &HashMap<String, Value>) -> Result<Roles, JwtError> {
@@ -72,7 +78,11 @@ impl JwtBearer {
         }
     }
 
-    async fn authenticate_with_header(header: &str, req: &Request<'_>) -> Outcome {
+    async fn authenticate_with_header(
+        header: &str,
+        req: &Request<'_>,
+        user_builder: &UserBuilder,
+    ) -> Outcome {
         // We expect a Bearer scheme
         let Some(token) = header.strip_prefix("Bearer ") else {
             return Outcome::Forward(());
@@ -102,8 +112,7 @@ impl JwtBearer {
             }
         };
 
-        let repository = req.user_repository();
-        Outcome::Success(repository.user_from_data(user))
+        Outcome::Success(user_builder.build(user))
     }
 }
 
@@ -117,9 +126,9 @@ impl AuthenticationScheme for JwtBearer {
         )
     }
 
-    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, user_builder: &UserBuilder) -> Outcome {
         for header in req.headers().get("Authorization") {
-            match (Self::authenticate_with_header(header, req)).await {
+            match (Self::authenticate_with_header(header, req, user_builder)).await {
                 Outcome::Success(user) => return Outcome::Success(user),
                 Outcome::Failure(err) => return Outcome::Failure(err),
                 Outcome::Forward(()) => {}

@@ -32,8 +32,23 @@ impl Roles {
         self.roles.contains(role)
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &str>{
+    pub fn iter(&self) -> impl Iterator<Item = &str> {
         self.roles.iter().map(|s| s.as_str())
     }
 }
 
+impl From<Vec<String>> for Roles {
+    fn from(roles: Vec<String>) -> Self {
+        Self {
+            roles: roles.into_iter().collect(),
+        }
+    }
+}
+
+impl From<Vec<&str>> for Roles {
+    fn from(roles: Vec<&str>) -> Self {
+        Self {
+            roles: roles.into_iter().map(|s| s.to_owned()).collect(),
+        }
+    }
+}

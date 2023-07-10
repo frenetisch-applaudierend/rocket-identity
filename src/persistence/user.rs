@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::auth::{ClaimValue, UserData};
+use crate::auth::{ClaimValue, UserData, UserId};
 
 #[derive(Clone, Debug)]
 pub struct User {
-    pub id: String,
+    pub id: Option<UserId>,
     pub username: String,
     pub claims: HashMap<String, ClaimValue>,
     pub roles: HashSet<String>,

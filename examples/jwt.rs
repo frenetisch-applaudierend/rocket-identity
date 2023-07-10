@@ -11,7 +11,7 @@ use rocket_identity::{
     },
     config::{Config, RocketIdentityInitializer},
     persistence::InMemoryUserStore,
-    RocketExt, RocketIdentity,
+    RocketIdentity,
 };
 
 #[macro_use]
@@ -41,7 +41,7 @@ impl Policy for Admin {
 
 #[post("/login", format = "application/json", data = "<body>")]
 async fn login(
-    users: &dyn UserRepository,
+    users: &UserRepository,
     token_provider: JwtTokenProvider<'_>,
     body: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Unauthorized<()>> {
@@ -91,18 +91,14 @@ fn rocket() -> _ {
         deconding_key: DecodingKey::from_secret(secret),
     };
 
-    let config = Config::new(user_store).add_scheme(JwtBearer::new(jwt_config));
+    let config = Config::new(user_store)
+        .add_scheme(JwtBearer::new(jwt_config));
 
     rocket::build()
         .mount("/", routes![login, index, admin])
         .attach(RocketIdentity::fairing(config))
 }
 
-struct Initializer;
+async fn setup_users(user_repository: &UserRepository) {
 
-#[rocket::async_trait]
-impl RocketIdentityInitializer for Initializer {
-    async fn initialize(&self, rocket: &rocket::Rocket<rocket::Orbit>) {
-        todo!()
-    }
 }
