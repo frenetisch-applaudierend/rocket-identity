@@ -22,33 +22,6 @@ pub trait AuthenticationScheme: Send + Sync {
     async fn challenge(&self, res: &mut rocket::Response);
 }
 
-/// A collection of authentication schemes.
-pub(crate) struct AuthenticationSchemes(Vec<Box<dyn AuthenticationScheme>>);
-
-impl AuthenticationSchemes {
-    /// Create a new collection of authentication schemes.
-    pub fn new(schemes: Vec<Box<dyn AuthenticationScheme>>) -> Self {
-        Self(schemes)
-    }
-
-    /// Check if the authentication scheme collection is empty.
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-
-    /// Create an iterator over the authentication schemes.
-    pub fn iter(&self) -> impl Iterator<Item = &dyn AuthenticationScheme> {
-        self.0.iter().map(|b| &**b)
-    }
-
-    /// Create a mutable iterator over the authentication schemes.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut dyn AuthenticationScheme> {
-        self.0
-            .iter_mut()
-            .map(|b| -> &mut dyn AuthenticationScheme { &mut **b })
-    }
-}
-
 /// The outcome of an authentication attempt. Success means that the attempt was
 /// successful. Failure means that the scheme was applicable but authentication failed
 /// e.g. because of invalid credentials. Forward means that the scheme was not applicable

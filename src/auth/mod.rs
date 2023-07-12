@@ -21,4 +21,4 @@ pub use user_data::*;
 pub use user_id::*;
 
 pub use policy::Policy;
-pub use scheme::AuthenticationScheme;
+pub use scheme::{AuthenticationScheme, MissingAuthPolicy};

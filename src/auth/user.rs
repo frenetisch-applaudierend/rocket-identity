@@ -1,8 +1,8 @@
 use rocket::{http::Status, request::Outcome};
 
-use crate::auth::{
-    scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy},
-    UserBuilder,
+use crate::{
+    auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy},
+    persistence,
 };
 
 use super::{scheme::AuthenticationError, Authorization, Claims, Policy, Roles, UserData, UserId};
@@ -24,6 +24,17 @@ impl User {
             username: user_data.username,
             claims: user_data.claims,
             roles: user_data.roles,
+        }
+    }
+
+    pub(crate) fn from_repo(repo_user: persistence::User) -> Self {
+        Self {
+            id: repo_user
+                .id
+                .expect("User::from_repo must be called with a user containing a UserId"),
+            username: repo_user.username,
+            claims: Claims::from_inner(repo_user.claims),
+            roles: Roles::from_inner(repo_user.roles),
         }
     }
 
@@ -66,47 +77,40 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
 
     async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
         let outcome = req
-            .local_cache_async(async move { User::create_from_request(req).await })
+            .local_cache_async(async move { create_from_request(req).await })
             .await;
 
-        match outcome {
+        return match outcome {
             Outcome::Success(user) => Outcome::Success(user),
             Outcome::Failure((status, err)) => Outcome::Failure((*status, err.clone())),
             Outcome::Forward(()) => Outcome::Forward(()),
-        }
-    }
-}
+        };
 
-impl User {
-    async fn create_from_request(req: &rocket::Request<'_>) -> Outcome<Self, AuthenticationError> {
-        use rocket::outcome::Outcome::*;
+        async fn create_from_request(
+            req: &rocket::Request<'_>,
+        ) -> Outcome<User, AuthenticationError> {
+            use rocket::outcome::Outcome::*;
 
-        let missing_auth_policy = MissingAuthPolicy::Fail;
+            let missing_auth_policy = req
+                .rocket()
+                .state::<MissingAuthPolicy>()
+                .expect("Missing auth policy not configured");
 
-        let schemes = req
-            .rocket()
-            .state::<AuthenticationSchemes>()
-            .expect("Missing required AuthenticationSchemeCollection");
+            let schemes = req
+                .rocket()
+                .state::<AuthenticationSchemes>()
+                .expect("Missing required AuthenticationSchemeCollection");
 
-        let user_builder = UserBuilder::new();
-        for scheme in schemes.iter() {
-            match scheme.authenticate(req, &user_builder).await {
-                Success(user) => {
-                    user.validate()
-                        .expect("Scheme created an invalid user. This is a programming error.");
-
-                    return Success(user);
-                }
-                Failure(err) => return Outcome::from_err(err, missing_auth_policy),
-                Forward(_) => {}
+            match schemes.authenticate(req).await {
+                Success(user) => Success(user),
+                Failure(err) => return Outcome::from_err(err, *missing_auth_policy),
+                Forward(_) => match missing_auth_policy {
+                    MissingAuthPolicy::Fail => {
+                        Failure((Status::Unauthorized, AuthenticationError::Unauthenticated))
+                    }
+                    MissingAuthPolicy::Forward => Forward(()),
+                },
             }
-        }
-
-        match missing_auth_policy {
-            MissingAuthPolicy::Fail => {
-                Failure((Status::Unauthorized, AuthenticationError::Unauthenticated))
-            }
-            MissingAuthPolicy::Forward => Forward(()),
         }
     }
 }

@@ -71,21 +71,16 @@ impl UserRepository {
             })
             .transpose()?;
 
-        let user = persistence::User::from_data(data, password_hash);
+        let mut user = persistence::User::from_data(data, password_hash);
 
         let mut user_store = self.user_store.write().await;
 
-        let id = user_store
-            .add_user(&user)
+        user_store
+            .add_user(&mut user)
             .await
             .map_err(AddUserError::Other)?;
 
-        Ok(auth::User::from_data(UserData {
-            id: Some(id),
-            username: user.username,
-            claims: Claims::from_inner(user.claims),
-            roles: Roles::from_inner(user.roles),
-        }))
+        Ok(auth::User::from_repo(user))
     }
 }
 

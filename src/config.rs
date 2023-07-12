@@ -1,6 +1,6 @@
 use crate::{
     auth::hasher::{Argon2PasswordHasher, PasswordHasher},
-    auth::scheme::AuthenticationScheme,
+    auth::{AuthenticationScheme, MissingAuthPolicy},
     persistence::UserStore,
 };
 
@@ -11,6 +11,7 @@ where
 {
     user_store: Option<S>,
     password_hasher: Option<H>,
+    missing_auth_policy: MissingAuthPolicy,
     auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
 }
 
@@ -21,6 +22,8 @@ pub trait ConfigurationProvider: Send + Sync {
     fn user_store(&mut self) -> Option<Self::UserStore>;
 
     fn password_hasher(&mut self) -> Option<Self::PasswordHasher>;
+
+    fn missing_auth_policy(&mut self) -> MissingAuthPolicy;
 
     fn auth_schemes(&mut self) -> Vec<Box<dyn AuthenticationScheme>>;
 }
@@ -33,6 +36,7 @@ where
         Self {
             user_store: Some(user_store),
             password_hasher: Some(Argon2PasswordHasher::new()),
+            missing_auth_policy: MissingAuthPolicy::Fail,
             auth_schemes: Vec::new(),
         }
     }
@@ -47,6 +51,7 @@ where
         Config {
             user_store: Some(user_store),
             password_hasher: self.password_hasher,
+            missing_auth_policy: self.missing_auth_policy,
             auth_schemes: self.auth_schemes,
         }
     }
@@ -55,6 +60,16 @@ where
         Config {
             user_store: self.user_store,
             password_hasher: Some(password_hasher),
+            missing_auth_policy: self.missing_auth_policy,
+            auth_schemes: self.auth_schemes,
+        }
+    }
+
+    pub fn with_missing_auth_policy(self, missing_auth_policy: MissingAuthPolicy) -> Config<S, H> {
+        Config {
+            user_store: self.user_store,
+            password_hasher: self.password_hasher,
+            missing_auth_policy,
             auth_schemes: self.auth_schemes,
         }
     }
@@ -80,6 +95,10 @@ where
 
     fn password_hasher(&mut self) -> Option<Self::PasswordHasher> {
         self.password_hasher.take()
+    }
+
+    fn missing_auth_policy(&mut self) -> MissingAuthPolicy {
+        self.missing_auth_policy
     }
 
     fn auth_schemes(&mut self) -> Vec<Box<dyn AuthenticationScheme>> {

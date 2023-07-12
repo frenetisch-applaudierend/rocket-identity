@@ -39,10 +39,7 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
     /// On ignition we verify the configuration and setup the necessary managed state.
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
         let mut rocket = rocket;
-        let mut config = self
-            .config
-            .write()
-            .await;
+        let mut config = self.config.write().await;
 
         // Load user store from config
         let Some(user_store) = config.user_store() else {
@@ -55,6 +52,9 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
             log::error!("No password hasher configured");
             return Err(rocket);
         };
+
+        // Load missing auth policy from config
+        let missing_auth_policy = config.missing_auth_policy();
 
         // Load authentication schemes from config
         let mut auth_schemes = AuthenticationSchemes::new(config.auth_schemes());
@@ -71,7 +71,10 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
         let user_repository = UserRepository::new(user_store, password_hasher);
 
         // Add managed state and return rocket instance
-        Ok(rocket.manage(user_repository).manage(auth_schemes))
+        Ok(rocket
+            .manage(user_repository)
+            .manage(missing_auth_policy)
+            .manage(auth_schemes))
     }
 
     /// On response we check if the response was 401 Unauthorized and if so we add a

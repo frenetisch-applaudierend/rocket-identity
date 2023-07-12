@@ -22,17 +22,14 @@ impl UserStore for InMemoryUserStore {
         Ok(None)
     }
 
-    async fn add_user(&mut self, user: &User) -> Result<UserId> {
-        let mut user = user.clone();
-
+    async fn add_user(&mut self, user: &mut User) -> Result<()> {
         if (user.id).is_none() {
             user.id = Some(UserId::new_uuid());
         }
 
-        let user_id = user.id.clone().unwrap();
-        self.users.push(user);
+        self.users.push(user.clone());
 
-        Ok(user_id)
+        Ok(())
     }
 }
 
