@@ -1,8 +1,8 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::Request;
 
-use crate::auth::scheme::prelude::*;
-use crate::util::Boxable;
+use crate::auth::{scheme::prelude::*, LoginError};
+
 
 pub struct Basic {
     challenge: String,
@@ -26,14 +26,16 @@ impl Basic {
         let credentials = match BASE64.decode(credentials) {
             Ok(creds) => creds,
             Err(err) => {
-                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+                log::error!("Failed to decode credentials: {}", err);
+                return Outcome::Failure(AuthenticationError::InvalidParams);
             }
         };
 
         let credentials = match String::from_utf8(credentials) {
             Ok(creds) => creds,
             Err(err) => {
-                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+                log::error!("Failed to decode credentials: {}", err);
+                return Outcome::Failure(AuthenticationError::InvalidParams);
             }
         };
 
@@ -52,6 +54,11 @@ impl Basic {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Basic {
+
+    fn name(&self) -> &'static str {
+        "Basic"
+    }
+
     async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Basic::authenticate_with_header(header, req)).await {
@@ -70,5 +77,16 @@ impl AuthenticationScheme for Basic {
             "WWW-Authenticate",
             self.challenge.clone(),
         ));
+    }
+}
+
+impl From<LoginError> for AuthenticationError {
+    fn from(err: LoginError) -> Self {
+        match err {
+            LoginError::UserNotFound => AuthenticationError::Unauthenticated,
+            LoginError::MissingPassword => AuthenticationError::Unauthenticated,
+            LoginError::IncorrectPassword => AuthenticationError::Unauthenticated,
+            LoginError::Other => AuthenticationError::Other,
+        }
     }
 }

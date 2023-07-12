@@ -4,7 +4,6 @@ use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
 use rocket::{serde::json::Value, Request};
 
 use crate::auth::scheme::prelude::*;
-use crate::util::Boxable;
 
 use super::JwtConfig;
 
@@ -101,14 +100,16 @@ impl JwtBearer {
         let token = match decode::<HashMap<String, Value>>(token, key, &validation) {
             Ok(token) => token,
             Err(err) => {
-                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+                log::error!("Failed to decode token: {}", err);
+                return Outcome::Failure(AuthenticationError::InvalidParams);
             }
         };
 
         let user = match UserData::try_from(&token) {
             Ok(user) => user,
             Err(err) => {
-                return Outcome::Failure(AuthenticationError::InvalidParams(Some(err.boxed())))
+                log::error!("Failed to get user data from token: {}", err);
+                return Outcome::Failure(AuthenticationError::InvalidParams);
             }
         };
 
@@ -118,6 +119,10 @@ impl JwtBearer {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for JwtBearer {
+    fn name(&self) -> &'static str {
+        "JwtBearer"
+    }
+
     fn setup(&mut self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
         rocket.manage(
             self.config

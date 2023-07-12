@@ -21,6 +21,7 @@ rocket = { version = "=0.5.0-rc.3", default-features = false, features = [
 thiserror = "1.0"
 tokio = { version = "1.29", features = ["sync"] }
 uuid = { version = "1.4", features = ["v4"] }
+yansi = "0.5"
 
 [dev-dependencies]
 rocket = { version = "=0.5.0-rc.3", features = ["json"] }

@@ -1,11 +1,15 @@
 use rocket::http::Status;
 use user_builder::UserBuilder;
 
-use crate::{auth::{User, user_builder}, util::DynError};
+use crate::auth::{user_builder, User};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
 pub trait AuthenticationScheme: Send + Sync {
+    
+    /// The name of this authentication scheme.
+    fn name(&self) -> &'static str;
+
     /// Setup the authentication scheme. This is called once when the server starts and gives
     /// the scheme a chance to do any necessary setup like registering state.
     fn setup(&mut self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
@@ -39,8 +43,8 @@ impl<T> FromAuthError for rocket::request::Outcome<T, AuthenticationError> {
     fn from_err(err: AuthenticationError, policy: MissingAuthPolicy) -> Self {
         let status = match err {
             AuthenticationError::Unauthenticated => Status::Unauthorized,
-            AuthenticationError::InvalidParams(_) => Status::BadRequest,
-            AuthenticationError::Other(_) => Status::InternalServerError,
+            AuthenticationError::InvalidParams => Status::BadRequest,
+            AuthenticationError::Other => Status::InternalServerError,
         };
 
         let should_forward = match policy {
@@ -57,30 +61,16 @@ impl<T> FromAuthError for rocket::request::Outcome<T, AuthenticationError> {
 }
 
 /// An error that can happen during authentication.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, Copy, thiserror::Error)]
 pub enum AuthenticationError {
     #[error("The user is not authenticated")]
     Unauthenticated,
 
     #[error("The supplied authentication parameters are not valid")]
-    InvalidParams(Option<DynError>),
+    InvalidParams,
 
     #[error("Some other error happened")]
-    Other(Option<DynError>),
-}
-
-impl Clone for AuthenticationError {
-    fn clone(&self) -> Self {
-        match self {
-            AuthenticationError::Unauthenticated => AuthenticationError::Unauthenticated,
-            AuthenticationError::InvalidParams(err) => {
-                AuthenticationError::InvalidParams(err.as_ref().map(|e| e.dyn_clone()))
-            }
-            AuthenticationError::Other(err) => {
-                AuthenticationError::Other(err.as_ref().map(|e| e.dyn_clone()))
-            }
-        }
-    }
+    Other,
 }
 
 #[derive(Debug, Clone, Copy)]

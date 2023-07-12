@@ -1,37 +1,35 @@
 use rocket::{
     fairing::{self, Fairing, Info, Kind},
     http::Status,
-    Build, Rocket,
+    log::PaintExt,
+    Build, Orbit, Rocket,
 };
 use tokio::sync::RwLock;
 
+use yansi::Paint;
+
 use crate::{
-    auth::{hasher::PasswordHasher, scheme::AuthenticationSchemes, UserRepository},
-    config::{Config, ConfigurationProvider},
-    persistence::UserStore,
+    auth::{scheme::AuthenticationSchemes, UserRepository},
+    config::Config,
 };
 
-pub struct RocketIdentity<C: ConfigurationProvider> {
-    config: RwLock<C>,
+pub struct RocketIdentity {
+    config: RwLock<Option<Config>>,
 }
 
-impl<S, H> RocketIdentity<Config<S, H>>
-where
-    S: UserStore,
-    H: PasswordHasher,
-{
-    pub fn fairing(config: Config<S, H>) -> Self {
+impl RocketIdentity {
+    pub fn fairing(config: Config) -> Self {
         Self {
-            config: RwLock::new(config),
+            config: RwLock::new(Some(config)),
         }
     }
 }
 
 #[rocket::async_trait]
-impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
+impl Fairing for RocketIdentity {
     fn info(&self) -> Info {
         Info {
-            name: "Rocket Identity",
+            name: "Identity",
             kind: Kind::Ignite | Kind::Liftoff | Kind::Response | Kind::Singleton,
         }
     }
@@ -39,28 +37,12 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
     /// On ignition we verify the configuration and setup the necessary managed state.
     async fn on_ignite(&self, rocket: Rocket<Build>) -> fairing::Result {
         let mut rocket = rocket;
-        let mut config = self.config.write().await;
+        let config = self.config.write().await.take().expect("Missing config");
 
-        // Load user store from config
-        let Some(user_store) = config.user_store() else {
-            log::error!("No user store configured");
-            return Err(rocket);
-        };
-
-        // Load password hasher from config
-        let Some(password_hasher) = config.password_hasher() else {
-            log::error!("No password hasher configured");
-            return Err(rocket);
-        };
-
-        // Load missing auth policy from config
-        let missing_auth_policy = config.missing_auth_policy();
-
-        // Load authentication schemes from config
-        let mut auth_schemes = AuthenticationSchemes::new(config.auth_schemes());
-        if auth_schemes.is_empty() {
-            log::warn!("No authentication schemes configured");
-        }
+        let user_store = config.user_store;
+        let password_hasher = config.password_hasher;
+        let missing_auth_policy = config.missing_auth_policy;
+        let mut auth_schemes = AuthenticationSchemes::new(config.auth_schemes);
 
         // Allow authentication schemes to setup themselves
         for scheme in auth_schemes.iter_mut() {
@@ -75,6 +57,23 @@ impl<C: ConfigurationProvider + 'static> Fairing for RocketIdentity<C> {
             .manage(user_repository)
             .manage(missing_auth_policy)
             .manage(auth_schemes))
+    }
+
+    async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {
+        rocket::info!("{}{}:", Paint::emoji("🔐 "), Paint::magenta("Identity"));
+
+        // Log authentication schemes
+        let auth_schemes = rocket
+            .state::<AuthenticationSchemes>()
+            .expect("Missing authentication schemes");
+
+        if auth_schemes.is_empty() {
+            rocket::warn_!("No authentication schemes configured");
+        }
+
+        for scheme in auth_schemes.iter() {
+            rocket::info_!("Authentication scheme: {}", scheme.name());
+        }
     }
 
     /// On response we check if the response was 401 Unauthorized and if so we add a
