@@ -93,15 +93,21 @@ impl<'r> FromRequest<'r> for &'r UserRepository {
     }
 }
 
-pub trait UserRepositoryRequestExt {
+pub trait UserRepositoryAccessor {
     fn user_repository(&self) -> &UserRepository;
 }
 
-impl<'r> UserRepositoryRequestExt for Request<'r> {
+impl<'r> UserRepositoryAccessor for Request<'r> {
     fn user_repository(&self) -> &UserRepository {
         self.rocket()
             .state::<UserRepository>()
             .expect("Missing required UserRepository")
+    }
+}
+
+impl UserRepositoryAccessor for rocket::Rocket<rocket::Orbit> {
+    fn user_repository(&self) -> &UserRepository {
+        self.state().expect("Missing required UserRepository")
     }
 }
 
