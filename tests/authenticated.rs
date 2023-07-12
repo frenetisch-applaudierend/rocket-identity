@@ -1,13 +1,15 @@
 use rocket::{
-    catch, catchers, get,
+    catch, catchers,
+    fairing::AdHoc,
+    get,
     http::{Header, Status},
     local::blocking::Client,
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{hasher::insecure::IdentityPasswordHasher, scheme::basic::Basic, User, UserRepository},
-    config::{Config, RocketIdentityInitializer},
-    persistence::InMemoryUserStore,
+    auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
+    config::Config,
+    persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
 
@@ -22,32 +24,21 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 }
 
 fn setup() -> Rocket<Build> {
-    let hasher = IdentityPasswordHasher;
-    let mut repository = InMemoryUserStore::new();
-    repository.add_user("user1", "pass1", &hasher, |_| {});
-
-    let config = Config::new(repository)
-        .with_password_hasher(hasher)
-        .add_scheme(Basic::new("Server"))
-        .with_initializer(Initializer);
+    let config = Config::new(InMemoryUserStore::new()).add_scheme(Basic::new("Server"));
 
     rocket::build()
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
         .attach(RocketIdentity::fairing(config))
+        .attach(AdHoc::on_liftoff("User setup", |r| Box::pin(initialize(r))))
 }
 
-struct Initializer;
+async fn initialize(rocket: &Rocket<rocket::Orbit>) {
+    let repo = rocket.user_repository();
 
-#[rocket::async_trait]
-impl RocketIdentityInitializer for Initializer {
-    async fn initialize(&self, rocket: &Rocket<rocket::Orbit>) {
-        let _user_repository = rocket
-            .state::<Box<dyn UserRepository>>()
-            .expect("Missing user repository");
-
-        todo!("Register user in repository")
-    }
+    repo.add_user(UserData::with_username("user1"), Some("pass1"))
+        .await
+        .expect("Could not add user");
 }
 
 #[test]
