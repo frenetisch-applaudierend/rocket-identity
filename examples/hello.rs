@@ -1,6 +1,6 @@
-use rocket::fairing::AdHoc;
+use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
-    auth::{scheme::basic::Basic, Roles, User, UserData, UserRepository},
+    auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
     config::Config,
     persistence::store::InMemoryUserStore,
     RocketIdentity,
@@ -20,45 +20,26 @@ async fn rocket() -> _ {
     // that actually persists users
     let user_store = InMemoryUserStore::new();
 
-    let rocket = rocket::build()
+    rocket::build()
         .mount("/", routes![index])
         .attach(RocketIdentity::fairing(
             Config::new(user_store).add_scheme(Basic::new("Hello")),
         ))
         .attach(AdHoc::on_liftoff("Setup users", |r| {
-            Box::pin(async move {
-                setup_users(r.state().unwrap()).await;
-            })
-        }));
-
-    rocket
+            Box::pin(setup_users(r))
+        }))
 }
 
-async fn setup_users(user_repository: &UserRepository) {
-    // Add users to the user repository
-    user_repository
-        .add_user(
-            UserData {
-                id: None,
-                username: "user1".to_string(),
-                claims: Default::default(),
-                roles: Default::default(),
-            },
-            Some("pass1"),
-        )
-        .await
-        .expect("Failed to add user");
+async fn setup_users(rocket: &Rocket<Orbit>) {
+    let repo = rocket.user_repository();
 
-    user_repository
-        .add_user(
-            UserData {
-                id: None,
-                username: "admin".to_string(),
-                claims: Default::default(),
-                roles: Roles::from(vec!["admin"]),
-            },
-            Some("admin"),
-        )
+    repo.add_user(UserData::with_username("user1"), Some("pass1"))
         .await
-        .expect("Failed to add user");
+        .expect("Could not add user");
+
+    let mut admin = UserData::with_username("admin");
+    admin.roles.add("admin");
+    repo.add_user(admin, Some("admin"))
+        .await
+        .expect("Could not add user");
 }

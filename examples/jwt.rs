@@ -1,16 +1,17 @@
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use rocket::{
+    fairing::AdHoc,
     response::status::Unauthorized,
     serde::{json::Json, Deserialize, Serialize},
+    Orbit, Rocket,
 };
 use rocket_identity::{
     auth::{
-        hasher,
         scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-        Authorization, Policy, User, UserRepository,
+        Authorization, Policy, User, UserData, UserRepository, UserRepositoryAccessor,
     },
-    config::{Config, RocketIdentityInitializer},
-    persistence::InMemoryUserStore,
+    config::Config,
+    persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
 
@@ -72,17 +73,9 @@ fn admin(user: &User, _admin: Authorization<Admin>) -> String {
 
 #[launch]
 fn rocket() -> _ {
-    // Create a password hasher. In a real app you'd use hasher::default(<salt>) or
-    // another hasher that is secure
-    let hasher = hasher::insecure::IdentityPasswordHasher;
-
-    // Setup user repository. In a real app you'd use something
+    // Setup user backing store. In a real app you'd use something
     // that actually persists users
-    let mut user_store = InMemoryUserStore::new();
-    user_store.add_user("user1", "pass1", &hasher, |_| {});
-    user_store.add_user("admin", "admin", &hasher, |u| {
-        u.roles.add("admin");
-    });
+    let user_store = InMemoryUserStore::new();
 
     // This should be read from configuration
     let secret = b"My Secret";
@@ -91,14 +84,26 @@ fn rocket() -> _ {
         deconding_key: DecodingKey::from_secret(secret),
     };
 
-    let config = Config::new(user_store)
-        .add_scheme(JwtBearer::new(jwt_config));
+    let config = Config::new(user_store).add_scheme(JwtBearer::new(jwt_config));
 
     rocket::build()
         .mount("/", routes![login, index, admin])
         .attach(RocketIdentity::fairing(config))
+        .attach(AdHoc::on_liftoff("User setup", |r| {
+            Box::pin(setup_users(r))
+        }))
 }
 
-async fn setup_users(user_repository: &UserRepository) {
+async fn setup_users(rocket: &Rocket<Orbit>) {
+    let repo = rocket.user_repository();
 
+    repo.add_user(UserData::with_username("user1"), Some("pass1"))
+        .await
+        .expect("Could not add user");
+
+    let mut admin = UserData::with_username("admin");
+    admin.roles.add("admin");
+    repo.add_user(admin, Some("admin"))
+        .await
+        .expect("Could not add user");
 }
