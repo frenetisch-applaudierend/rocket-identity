@@ -3,5 +3,6 @@ Authentication Framework for [Rocket](https://rocket.rs) Inspired by ASP.NET Cor
 
 ## TODO
 
+* Cookie authentication
 * Implement JWT customization
 * Split functionality into features

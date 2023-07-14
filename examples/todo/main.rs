@@ -6,6 +6,7 @@ use rocket_identity::{
 #[macro_use]
 extern crate rocket;
 
+mod todo;
 mod users;
 
 #[launch]
@@ -16,4 +17,5 @@ fn rocket() -> _ {
     rocket::build()
         .attach(RocketIdentity::fairing(identity_config))
         .mount("/users", users::routes())
+        .mount("/todo", todo::routes())
 }
