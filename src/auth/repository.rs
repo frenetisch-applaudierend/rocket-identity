@@ -28,7 +28,7 @@ impl UserRepository {
         }
     }
 
-    pub async fn login(&self, username: &str, password: &str) -> Result<User, LoginError> {
+    pub async fn authenticate(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let user_store = self.user_store.read().await;
 
         let Some(repo_user) = user_store.find_user_by_username(username).await.map_err(|err| {

@@ -45,7 +45,7 @@ impl Basic {
 
         let repository = req.user_repository();
 
-        match repository.login(username, pass).await {
+        match repository.authenticate(username, pass).await {
             Ok(user) => Outcome::Success(user),
             Err(err) => Outcome::Failure(err.into()),
         }

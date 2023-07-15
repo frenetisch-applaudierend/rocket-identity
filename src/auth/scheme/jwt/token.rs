@@ -9,7 +9,6 @@ use rocket::{
 };
 
 use crate::auth::User;
-use crate::util::Result;
 
 use super::{Claims, JwtConfig};
 
@@ -22,7 +21,7 @@ pub struct JwtTokenProvider<'r> {
 }
 
 impl<'r> JwtTokenProvider<'r> {
-    pub fn generate_token(&self, user: &User) -> Result<JwtToken> {
+    pub fn create_token(&self, user: &User) -> Result<JwtToken, JwtTokenError> {
         let now = OffsetDateTime::now_utc();
 
         let mut other = HashMap::new();
@@ -56,4 +55,10 @@ impl<'r> FromRequest<'r> for JwtTokenProvider<'r> {
             key: &config.encoding_key,
         })
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum JwtTokenError {
+    #[error("Failed to create token: {0}")]
+    CreateToken(#[from] jsonwebtoken::errors::Error),
 }

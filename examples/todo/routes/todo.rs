@@ -1,6 +1,5 @@
 use rocket_identity::auth::User;
 
-
 pub fn routes() -> Vec<rocket::Route> {
     routes![list]
 }

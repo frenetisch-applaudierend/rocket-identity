@@ -47,12 +47,12 @@ async fn login(
     body: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Unauthorized<()>> {
     let user = users
-        .login(&body.username, &body.password)
+        .authenticate(&body.username, &body.password)
         .await
         .map_err(|_| Unauthorized(None))?;
 
     let token = token_provider
-        .generate_token(&user)
+        .create_token(&user)
         .map_err(|_| Unauthorized(None))?;
 
     Ok(Json(LoginResponse {
