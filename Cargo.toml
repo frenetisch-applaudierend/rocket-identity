@@ -25,3 +25,4 @@ yansi = "0.5"
 
 [dev-dependencies]
 rocket = { version = "=0.5.0-rc.3", features = ["json"] }
+uuid = { version = "1.4", features = ["serde"] }

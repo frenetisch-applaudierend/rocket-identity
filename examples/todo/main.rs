@@ -5,11 +5,13 @@ use rocket_identity::{
     persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
+use tokio::sync::RwLock;
 
 #[macro_use]
 extern crate rocket;
 
 mod routes;
+mod services;
 
 #[launch]
 fn rocket() -> _ {
@@ -26,6 +28,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .attach(RocketIdentity::fairing(identity_config))
+        .manage(RwLock::new(services::TodoService::new()))
         .mount("/users", routes::users::routes())
         .mount("/todo", routes::todo::routes())
 }
