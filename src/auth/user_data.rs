@@ -1,14 +1,14 @@
-use super::{Claims, Roles, UserId};
+use super::{Claims, Roles};
 
 #[derive(Debug, Clone)]
-pub struct UserData {
-    pub id: Option<UserId>,
+pub struct UserData<TUserId> {
+    pub id: Option<TUserId>,
     pub username: String,
     pub claims: Claims,
     pub roles: Roles,
 }
 
-impl UserData {
+impl<TUserId> UserData<TUserId> {
     pub fn with_username(username: &str) -> Self {
         Self {
             id: None,

@@ -5,18 +5,18 @@ use crate::{
     persistence,
 };
 
-use super::{scheme::AuthenticationError, Authorization, Claims, Policy, Roles, UserData, UserId};
+use super::{scheme::AuthenticationError, Claims, Roles, UserData};
 
 #[derive(Debug)]
-pub struct User {
-    id: UserId,
+pub struct User<TUserId: 'static> {
+    id: TUserId,
     username: String,
     claims: Claims,
     roles: Roles,
 }
 
-impl User {
-    pub(crate) fn from_data(user_data: UserData) -> Self {
+impl<TUserId> User<TUserId> {
+    pub(crate) fn from_data(user_data: UserData<TUserId>) -> Self {
         Self {
             id: user_data
                 .id
@@ -27,7 +27,7 @@ impl User {
         }
     }
 
-    pub(crate) fn from_repo(repo_user: persistence::User) -> Self {
+    pub(crate) fn from_repo(repo_user: persistence::User<TUserId>) -> Self {
         Self {
             id: repo_user
                 .id
@@ -38,7 +38,7 @@ impl User {
         }
     }
 
-    pub fn id(&self) -> &UserId {
+    pub fn id(&self) -> &TUserId {
         &self.id
     }
 
@@ -61,18 +61,13 @@ impl User {
 
         Ok(())
     }
-
-    pub fn authorize<P: Policy>(&self) -> Option<Authorization<P>> {
-        if P::evaluate(self) {
-            Some(Authorization::new())
-        } else {
-            None
-        }
-    }
 }
 
 #[rocket::async_trait]
-impl<'r> rocket::request::FromRequest<'r> for &'r User {
+impl<'r, TUserId> rocket::request::FromRequest<'r> for &'r User<TUserId>
+where
+    TUserId: 'static + Send + Sync,
+{
     type Error = AuthenticationError;
 
     async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
@@ -86,9 +81,9 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
             Outcome::Forward(()) => Outcome::Forward(()),
         };
 
-        async fn create_from_request(
+        async fn create_from_request<TUserId: 'static>(
             req: &rocket::Request<'_>,
-        ) -> Outcome<User, AuthenticationError> {
+        ) -> Outcome<User<TUserId>, AuthenticationError> {
             use rocket::outcome::Outcome::*;
 
             let missing_auth_policy = req
@@ -98,7 +93,7 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
 
             let schemes = req
                 .rocket()
-                .state::<AuthenticationSchemes>()
+                .state::<AuthenticationSchemes<TUserId>>()
                 .expect("Missing required AuthenticationSchemeCollection");
 
             match schemes.authenticate(req).await {

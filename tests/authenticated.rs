@@ -14,7 +14,7 @@ use rocket_identity::{
 };
 
 #[get("/authenticated")]
-fn handler(user: &User) -> &str {
+fn handler(user: &User<u32>) -> &str {
     user.username()
 }
 
@@ -34,7 +34,7 @@ fn setup() -> Rocket<Build> {
 }
 
 async fn initialize(rocket: &Rocket<rocket::Orbit>) {
-    let repo = rocket.user_repository();
+    let repo = rocket.user_repository::<u32>();
 
     repo.add_user(UserData::with_username("user1"), Some("pass1"))
         .await

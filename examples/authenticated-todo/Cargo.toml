@@ -7,6 +7,7 @@ publish = false
 
 [dependencies]
 rocket = { version = "=0.5.0-rc.3" }
+rocket-identity = { path = "../.." }
 diesel = { version = "2.0.0", features = ["sqlite", "r2d2"] }
 diesel_migrations = "2.0.0"
 

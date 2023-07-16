@@ -21,12 +21,12 @@ pub struct JwtTokenProvider<'r> {
 }
 
 impl<'r> JwtTokenProvider<'r> {
-    pub fn create_token(&self, user: &User) -> Result<JwtToken, JwtTokenError> {
+    pub fn create_token<TUserId>(&self, user: &User<TUserId>) -> Result<JwtToken, JwtTokenError> {
         let now = OffsetDateTime::now_utc();
 
         let mut other = HashMap::new();
         other.insert("roles".to_string(), user.roles().iter().collect());
-        
+
         let claims = Claims {
             sub: user.username().to_string(),
             nbf: now.into(),

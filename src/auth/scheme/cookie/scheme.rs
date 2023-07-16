@@ -11,14 +11,17 @@ impl Cookie {
 }
 
 #[rocket::async_trait]
-impl AuthenticationScheme for Cookie {
-
+impl<TUserId: 'static> AuthenticationScheme<TUserId> for Cookie {
     fn name(&self) -> &'static str {
         "Cookie"
     }
 
-    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
-        let _repository = req.user_repository();
+    async fn authenticate(
+        &self,
+        req: &rocket::Request,
+        _user_builder: &UserBuilder,
+    ) -> Outcome<TUserId> {
+        let _repository = req.user_repository::<TUserId>();
         let cookies = req.cookies();
 
         let Some(_session_cookie) = cookies.get_private(&self.cookie_name) else {

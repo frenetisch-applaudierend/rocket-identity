@@ -12,15 +12,15 @@ use crate::{
 
 use super::{hasher::PasswordHasher, Claims, Roles, User, UserData};
 
-pub struct UserRepository {
-    pub user_store: RwLock<Box<dyn UserStore>>,
-    pub password_hasher: Box<dyn PasswordHasher>,
+pub struct UserRepository<TUserId> {
+    pub user_store: RwLock<Box<dyn UserStore<TUserId>>>,
+    pub password_hasher: Box<dyn PasswordHasher<TUserId>>,
 }
 
-impl UserRepository {
+impl<TUserId> UserRepository<TUserId> {
     pub(crate) fn new(
-        user_store: Box<dyn UserStore>,
-        password_hasher: Box<dyn PasswordHasher>,
+        user_store: Box<dyn UserStore<TUserId>>,
+        password_hasher: Box<dyn PasswordHasher<TUserId>>,
     ) -> Self {
         Self {
             user_store: RwLock::new(user_store),
@@ -28,7 +28,11 @@ impl UserRepository {
         }
     }
 
-    pub async fn authenticate(&self, username: &str, password: &str) -> Result<User, LoginError> {
+    pub async fn authenticate(
+        &self,
+        username: &str,
+        password: &str,
+    ) -> Result<User<TUserId>, LoginError> {
         let user_store = self.user_store.read().await;
 
         let Some(repo_user) = user_store.find_user_by_username(username).await.map_err(|err| {
@@ -65,9 +69,9 @@ impl UserRepository {
 
     pub async fn add_user(
         &self,
-        data: UserData,
+        data: UserData<TUserId>,
         password: Option<&str>,
-    ) -> Result<User, AddUserError> {
+    ) -> Result<User<TUserId>, AddUserError> {
         let password_hash = password
             .map(|p| {
                 self.password_hasher.hash_password(&data, p).map_err(|e| {
@@ -93,7 +97,7 @@ impl UserRepository {
 }
 
 #[rocket::async_trait]
-impl<'r> FromRequest<'r> for &'r UserRepository {
+impl<'r, TUserId: 'static> FromRequest<'r> for &'r UserRepository<TUserId> {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
@@ -101,9 +105,9 @@ impl<'r> FromRequest<'r> for &'r UserRepository {
     }
 }
 
-impl Sentinel for &UserRepository {
+impl<TUserId: 'static> Sentinel for &UserRepository<TUserId> {
     fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
-        if rocket.state::<UserRepository>().is_none() {
+        if rocket.state::<UserRepository<TUserId>>().is_none() {
             log::error!("UserRepository is not configured. Attach RocketIdentity::fairing() on your rocket instance.");
             true
         } else {
@@ -113,19 +117,19 @@ impl Sentinel for &UserRepository {
 }
 
 pub trait UserRepositoryAccessor {
-    fn user_repository(&self) -> &UserRepository;
+    fn user_repository<TUserId: 'static>(&self) -> &UserRepository<TUserId>;
 }
 
 impl<'r> UserRepositoryAccessor for Request<'r> {
-    fn user_repository(&self) -> &UserRepository {
+    fn user_repository<TUserId: 'static>(&self) -> &UserRepository<TUserId> {
         self.rocket()
-            .state::<UserRepository>()
+            .state::<UserRepository<TUserId>>()
             .expect("Missing required UserRepository")
     }
 }
 
 impl UserRepositoryAccessor for rocket::Rocket<rocket::Orbit> {
-    fn user_repository(&self) -> &UserRepository {
+    fn user_repository<TUserId: 'static>(&self) -> &UserRepository<TUserId> {
         self.state().expect("Missing required UserRepository")
     }
 }

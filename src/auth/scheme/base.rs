@@ -5,8 +5,7 @@ use crate::auth::{user_builder, User};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
-pub trait AuthenticationScheme: Send + Sync {
-    
+pub trait AuthenticationScheme<TUserId: 'static>: Send + Sync {
     /// The name of this authentication scheme.
     fn name(&self) -> &'static str;
 
@@ -19,7 +18,11 @@ pub trait AuthenticationScheme: Send + Sync {
     /// Try to authenticate a user. If the user is successfully authenticated, mutate the user with the correct values and return Success.
     /// If authentication was applicable but failed, return Failure with an appropriate HTTP status code and an error describing the problem.
     /// If authentication was not applicable, return Forward.
-    async fn authenticate(&self, req: &rocket::Request, user_builder: &UserBuilder) -> Outcome;
+    async fn authenticate(
+        &self,
+        req: &rocket::Request,
+        user_builder: &UserBuilder,
+    ) -> Outcome<TUserId>;
 
     /// Add challenge information for the client to the response.
     /// Usually by adding a WWW-Authenticate header for this authentication scheme.
@@ -32,7 +35,7 @@ pub trait AuthenticationScheme: Send + Sync {
 /// and a different scheme should be tried.
 ///
 /// When Failure is returned, a HTTP status code and an error must be specified.
-pub type Outcome = rocket::outcome::Outcome<User, AuthenticationError, ()>;
+pub type Outcome<TUserId> = rocket::outcome::Outcome<User<TUserId>, AuthenticationError, ()>;
 
 pub(crate) trait FromAuthError {
     fn from_err(err: AuthenticationError, policy: MissingAuthPolicy) -> Self;
