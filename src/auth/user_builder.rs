@@ -9,7 +9,7 @@ impl UserBuilder {
         Self { _make_private: () }
     }
 
-    pub fn build<TUserId>(&self, data: UserData<TUserId>) -> User<TUserId> {
+    pub fn build(&self, data: UserData) -> User {
         User::from_data(data)
     }
 }

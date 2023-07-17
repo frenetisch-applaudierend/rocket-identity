@@ -4,15 +4,15 @@ use crate::{
     persistence::UserStore,
 };
 
-pub struct Config<TUserId: 'static> {
-    pub(crate) user_store: Box<dyn UserStore<TUserId>>,
-    pub(crate) password_hasher: Box<dyn PasswordHasher<TUserId>>,
+pub struct Config {
+    pub(crate) user_store: Box<dyn UserStore>,
+    pub(crate) password_hasher: Box<dyn PasswordHasher>,
     pub(crate) missing_auth_policy: MissingAuthPolicy,
-    pub(crate) auth_schemes: Vec<Box<dyn AuthenticationScheme<TUserId>>>,
+    pub(crate) auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
 }
 
-impl<TUserId> Config<TUserId> {
-    pub fn new(user_store: impl UserStore<TUserId> + 'static) -> Self {
+impl Config {
+    pub fn new(user_store: impl UserStore + 'static) -> Self {
         Self {
             user_store: Box::new(user_store),
             password_hasher: Box::new(Argon2PasswordHasher::new()),
@@ -23,7 +23,7 @@ impl<TUserId> Config<TUserId> {
 
     pub fn with_password_hasher(
         self,
-        password_hasher: impl PasswordHasher<TUserId> + 'static,
+        password_hasher: impl PasswordHasher + 'static,
     ) -> Self {
         Self {
             user_store: self.user_store,
@@ -42,7 +42,7 @@ impl<TUserId> Config<TUserId> {
         }
     }
 
-    pub fn add_scheme(mut self, scheme: impl AuthenticationScheme<TUserId> + 'static) -> Self {
+    pub fn add_scheme(mut self, scheme: impl AuthenticationScheme + 'static) -> Self {
         self.auth_schemes.push(Box::new(scheme));
         self
     }

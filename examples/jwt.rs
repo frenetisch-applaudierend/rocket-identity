@@ -11,7 +11,7 @@ use rocket_identity::{
         User, UserData, UserRepository, UserRepositoryAccessor,
     },
     config::Config,
-    persistence::store::{InMemoryUserStore, StringGenerator},
+    persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
 
@@ -42,7 +42,7 @@ struct LoginResponse {
 
 #[post("/login", format = "application/json", data = "<body>")]
 async fn login(
-    users: &UserRepository<String>,
+    users: &UserRepository,
     token_provider: JwtTokenProvider<'_>,
     body: Json<LoginRequest>,
 ) -> Result<Json<LoginResponse>, Unauthorized<()>> {
@@ -62,12 +62,12 @@ async fn login(
 }
 
 #[get("/")]
-fn index(user: &User<String>) -> String {
+fn index(user: &User) -> String {
     format!("Hello, {}!", user.username())
 }
 
 #[get("/admin")]
-fn admin(user: &User<String> /*_admin: Authorization<Admin>*/) -> String {
+fn admin(user: &User /*_admin: Authorization<Admin>*/) -> String {
     format!("Hello, Admin {}!", user.username())
 }
 
@@ -75,7 +75,7 @@ fn admin(user: &User<String> /*_admin: Authorization<Admin>*/) -> String {
 fn rocket() -> _ {
     // Setup user backing store. In a real app you'd use something
     // that actually persists users
-    let user_store = InMemoryUserStore::new(StringGenerator);
+    let user_store = InMemoryUserStore::new();
 
     // This should be read from configuration
     let secret = b"My Secret";
@@ -95,7 +95,7 @@ fn rocket() -> _ {
 }
 
 async fn setup_users(rocket: &Rocket<Orbit>) {
-    let repo = rocket.user_repository::<String>();
+    let repo = rocket.user_repository();
 
     repo.add_user(UserData::with_username("user1"), Some("pass1"))
         .await

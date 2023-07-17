@@ -8,38 +8,27 @@ use crate::{
 use super::{scheme::AuthenticationError, Claims, Roles, UserData};
 
 #[derive(Debug)]
-pub struct User<TUserId: 'static> {
-    id: TUserId,
+pub struct User {
     username: String,
     claims: Claims,
     roles: Roles,
 }
 
-impl<TUserId> User<TUserId> {
-    pub(crate) fn from_data(user_data: UserData<TUserId>) -> Self {
+impl User {
+    pub(crate) fn from_data(user_data: UserData) -> Self {
         Self {
-            id: user_data
-                .id
-                .expect("User::from_data must be called with a user containing a UserId"),
             username: user_data.username,
             claims: user_data.claims,
             roles: user_data.roles,
         }
     }
 
-    pub(crate) fn from_repo(repo_user: persistence::User<TUserId>) -> Self {
+    pub(crate) fn from_repo(repo_user: persistence::User) -> Self {
         Self {
-            id: repo_user
-                .id
-                .expect("User::from_repo must be called with a user containing a UserId"),
             username: repo_user.username,
             claims: Claims::from_inner(repo_user.claims),
             roles: Roles::from_inner(repo_user.roles),
         }
-    }
-
-    pub fn id(&self) -> &TUserId {
-        &self.id
     }
 
     pub fn username(&self) -> &str {
@@ -64,9 +53,7 @@ impl<TUserId> User<TUserId> {
 }
 
 #[rocket::async_trait]
-impl<'r, TUserId> rocket::request::FromRequest<'r> for &'r User<TUserId>
-where
-    TUserId: 'static + Send + Sync,
+impl<'r> rocket::request::FromRequest<'r> for &'r User
 {
     type Error = AuthenticationError;
 
@@ -81,9 +68,9 @@ where
             Outcome::Forward(()) => Outcome::Forward(()),
         };
 
-        async fn create_from_request<TUserId: 'static>(
+        async fn create_from_request(
             req: &rocket::Request<'_>,
-        ) -> Outcome<User<TUserId>, AuthenticationError> {
+        ) -> Outcome<User, AuthenticationError> {
             use rocket::outcome::Outcome::*;
 
             let missing_auth_policy = req
@@ -93,7 +80,7 @@ where
 
             let schemes = req
                 .rocket()
-                .state::<AuthenticationSchemes<TUserId>>()
+                .state::<AuthenticationSchemes>()
                 .expect("Missing required AuthenticationSchemeCollection");
 
             match schemes.authenticate(req).await {

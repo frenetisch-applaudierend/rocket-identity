@@ -9,12 +9,12 @@ use rocket::{
 use rocket_identity::{
     auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
     config::Config,
-    persistence::store::{InMemoryUserStore, U32Generator},
+    persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
 
 #[get("/authenticated")]
-fn handler(user: &User<u32>) -> &str {
+fn handler(user: &User) -> &str {
     user.username()
 }
 
@@ -24,8 +24,7 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 }
 
 fn setup() -> Rocket<Build> {
-    let config =
-        Config::new(InMemoryUserStore::new(U32Generator::new())).add_scheme(Basic::new("Server"));
+    let config = Config::new(InMemoryUserStore::new()).add_scheme(Basic::new("Server"));
 
     rocket::build()
         .mount("/", routes![handler])
@@ -35,7 +34,7 @@ fn setup() -> Rocket<Build> {
 }
 
 async fn initialize(rocket: &Rocket<rocket::Orbit>) {
-    let repo = rocket.user_repository::<u32>();
+    let repo = rocket.user_repository();
 
     repo.add_user(UserData::with_username("user1"), Some("pass1"))
         .await

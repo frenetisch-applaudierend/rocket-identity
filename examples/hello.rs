@@ -2,7 +2,7 @@ use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
     auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
     config::Config,
-    persistence::store::{InMemoryUserStore, U32Generator},
+    persistence::store::InMemoryUserStore,
     RocketIdentity,
 };
 
@@ -10,7 +10,7 @@ use rocket_identity::{
 extern crate rocket;
 
 #[get("/")]
-fn index(user: &User<u32>) -> String {
+fn index(user: &User) -> String {
     format!("Hello, {}!", user.username())
 }
 
@@ -18,7 +18,7 @@ fn index(user: &User<u32>) -> String {
 async fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let user_store = InMemoryUserStore::new(U32Generator::new());
+    let user_store = InMemoryUserStore::new();
 
     rocket::build()
         .mount("/", routes![index])
@@ -31,7 +31,7 @@ async fn rocket() -> _ {
 }
 
 async fn setup_users(rocket: &Rocket<Orbit>) {
-    let repo = rocket.user_repository::<u32>();
+    let repo = rocket.user_repository();
 
     repo.add_user(UserData::with_username("user1"), Some("pass1"))
         .await

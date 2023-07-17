@@ -4,14 +4,14 @@ use super::PasswordHasher;
 
 pub struct IdentityPasswordHasher;
 
-impl<TUserId> PasswordHasher<TUserId> for IdentityPasswordHasher {
-    fn hash_password(&self, _user: &UserData<TUserId>, password: &str) -> Result<Vec<u8>> {
+impl PasswordHasher for IdentityPasswordHasher {
+    fn hash_password(&self, _user: &UserData, password: &str) -> Result<Vec<u8>> {
         Ok(password.bytes().collect())
     }
 
     fn verify_password(
         &self,
-        _user: &UserData<TUserId>,
+        _user: &UserData,
         password_hash: &[u8],
         password: &str,
     ) -> Result<bool> {
@@ -27,8 +27,7 @@ mod test {
     fn test_roundtrip() {
         let hasher = super::IdentityPasswordHasher;
 
-        let user = UserData::<u32> {
-            id: None,
+        let user = UserData {
             username: "user1".to_owned(),
             claims: Default::default(),
             roles: Default::default(),
@@ -50,8 +49,7 @@ mod test {
     fn test_invalid() {
         let hasher = super::IdentityPasswordHasher;
 
-        let user = UserData::<u32> {
-            id: None,
+        let user = UserData {
             username: "user1".to_owned(),
             claims: Default::default(),
             roles: Default::default(),

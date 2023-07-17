@@ -21,7 +21,7 @@ pub struct JwtTokenProvider<'r> {
 }
 
 impl<'r> JwtTokenProvider<'r> {
-    pub fn create_token<TUserId>(&self, user: &User<TUserId>) -> Result<JwtToken, JwtTokenError> {
+    pub fn create_token(&self, user: &User) -> Result<JwtToken, JwtTokenError> {
         let now = OffsetDateTime::now_utc();
 
         let mut other = HashMap::new();

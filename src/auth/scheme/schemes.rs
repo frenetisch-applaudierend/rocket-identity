@@ -5,11 +5,11 @@ use crate::auth::UserBuilder;
 use super::{AuthenticationScheme, Outcome};
 
 /// A collection of authentication schemes.
-pub(crate) struct AuthenticationSchemes<TUserId>(Vec<Box<dyn AuthenticationScheme<TUserId>>>);
+pub(crate) struct AuthenticationSchemes(Vec<Box<dyn AuthenticationScheme>>);
 
-impl<TUserId> AuthenticationSchemes<TUserId> {
+impl AuthenticationSchemes {
     /// Create a new collection of authentication schemes.
-    pub fn new(schemes: Vec<Box<dyn AuthenticationScheme<TUserId>>>) -> Self {
+    pub fn new(schemes: Vec<Box<dyn AuthenticationScheme>>) -> Self {
         Self(schemes)
     }
 
@@ -19,19 +19,19 @@ impl<TUserId> AuthenticationSchemes<TUserId> {
     }
 
     /// Create an iterator over the authentication schemes.
-    pub fn iter(&self) -> impl Iterator<Item = &dyn AuthenticationScheme<TUserId>> {
+    pub fn iter(&self) -> impl Iterator<Item = &dyn AuthenticationScheme> {
         self.0.iter().map(|b| &**b)
     }
 
     /// Create a mutable iterator over the authentication schemes.
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut dyn AuthenticationScheme<TUserId>> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut dyn AuthenticationScheme> {
         self.0
             .iter_mut()
-            .map(|b| -> &mut dyn AuthenticationScheme<TUserId> { &mut **b })
+            .map(|b| -> &mut dyn AuthenticationScheme { &mut **b })
     }
 
     /// Try to authenticate a user using the authentication schemes in order.
-    pub async fn authenticate(&self, req: &Request<'_>) -> Outcome<TUserId> {
+    pub async fn authenticate(&self, req: &Request<'_>) -> Outcome {
         let user_builder = UserBuilder::new();
         for scheme in self.iter() {
             match scheme.authenticate(req, &user_builder).await {

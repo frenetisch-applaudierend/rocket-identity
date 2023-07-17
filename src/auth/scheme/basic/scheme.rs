@@ -14,10 +14,10 @@ impl Basic {
         }
     }
 
-    async fn authenticate_with_header<TUserId: 'static>(
+    async fn authenticate_with_header(
         header: &str,
         req: &Request<'_>,
-    ) -> Outcome<TUserId> {
+    ) -> Outcome {
         // We expect a Basic scheme
         let Some(credentials) = header.strip_prefix("Basic ") else {
             return Outcome::Forward(());
@@ -55,7 +55,7 @@ impl Basic {
 }
 
 #[rocket::async_trait]
-impl<TUserId: 'static> AuthenticationScheme<TUserId> for Basic {
+impl AuthenticationScheme for Basic {
     fn name(&self) -> &'static str {
         "Basic"
     }
@@ -64,7 +64,7 @@ impl<TUserId: 'static> AuthenticationScheme<TUserId> for Basic {
         &self,
         req: &rocket::Request,
         _user_builder: &UserBuilder,
-    ) -> Outcome<TUserId> {
+    ) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Basic::authenticate_with_header(header, req)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

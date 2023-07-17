@@ -14,17 +14,15 @@ pub struct JwtBearer {
 
 type ParsedToken = TokenData<HashMap<String, Value>>;
 
-impl TryFrom<&ParsedToken> for UserData<String> {
+impl TryFrom<&ParsedToken> for UserData {
     type Error = JwtError;
 
     fn try_from(value: &ParsedToken) -> Result<Self, Self::Error> {
         let token_claims = &value.claims;
         let username = read_sub(token_claims)?;
-        let id = username.clone();
         let roles = read_roles(token_claims)?;
 
         Ok(UserData {
-            id: Some(id),
             username,
             claims: Claims::new(),
             roles,
@@ -81,7 +79,7 @@ impl JwtBearer {
         header: &str,
         req: &Request<'_>,
         user_builder: &UserBuilder,
-    ) -> Outcome<String> {
+    ) -> Outcome {
         // We expect a Bearer scheme
         let Some(token) = header.strip_prefix("Bearer ") else {
             return Outcome::Forward(());
@@ -118,7 +116,7 @@ impl JwtBearer {
 }
 
 #[rocket::async_trait]
-impl AuthenticationScheme<String> for JwtBearer {
+impl AuthenticationScheme for JwtBearer {
     fn name(&self) -> &'static str {
         "JwtBearer"
     }
@@ -135,7 +133,7 @@ impl AuthenticationScheme<String> for JwtBearer {
         &self,
         req: &rocket::Request,
         user_builder: &UserBuilder,
-    ) -> Outcome<String> {
+    ) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Self::authenticate_with_header(header, req, user_builder)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

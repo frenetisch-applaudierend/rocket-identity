@@ -13,12 +13,12 @@ use crate::{
     config::Config,
 };
 
-pub struct RocketIdentity<TUserId: 'static> {
-    config: RwLock<Option<Config<TUserId>>>,
+pub struct RocketIdentity {
+    config: RwLock<Option<Config>>,
 }
 
-impl<TUserId> RocketIdentity<TUserId> {
-    pub fn fairing(config: Config<TUserId>) -> Self {
+impl RocketIdentity {
+    pub fn fairing(config: Config) -> Self {
         Self {
             config: RwLock::new(Some(config)),
         }
@@ -26,7 +26,7 @@ impl<TUserId> RocketIdentity<TUserId> {
 }
 
 #[rocket::async_trait]
-impl<TUserId> Fairing for RocketIdentity<TUserId> {
+impl Fairing for RocketIdentity {
     fn info(&self) -> Info {
         Info {
             name: "Identity",
@@ -64,7 +64,7 @@ impl<TUserId> Fairing for RocketIdentity<TUserId> {
 
         // Log authentication schemes
         let auth_schemes = rocket
-            .state::<AuthenticationSchemes<TUserId>>()
+            .state::<AuthenticationSchemes>()
             .expect("Missing authentication schemes");
 
         if auth_schemes.is_empty() {
@@ -93,7 +93,7 @@ impl<TUserId> Fairing for RocketIdentity<TUserId> {
         // Add WWW-Authenticate header for each authentication scheme
         let auth_schemes = req
             .rocket()
-            .state::<AuthenticationSchemes<TUserId>>()
+            .state::<AuthenticationSchemes>()
             .expect("Missing authentication schemes");
 
         for scheme in auth_schemes.iter() {
