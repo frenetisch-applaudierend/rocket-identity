@@ -4,20 +4,19 @@ use rocket::Request;
 use crate::auth::{scheme::prelude::*, LoginError};
 
 pub struct Basic {
+    realm: String,
     challenge: String,
 }
 
 impl Basic {
     pub fn new(realm: &str) -> Self {
         Self {
+            realm: realm.to_string(),
             challenge: format!(r#"Basic realm="{}", charset="UTF-8""#, realm),
         }
     }
 
-    async fn authenticate_with_header(
-        header: &str,
-        req: &Request<'_>,
-    ) -> Outcome {
+    async fn authenticate_with_header(header: &str, req: &Request<'_>) -> Outcome {
         // We expect a Basic scheme
         let Some(credentials) = header.strip_prefix("Basic ") else {
             return Outcome::Forward(());
@@ -56,15 +55,11 @@ impl Basic {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for Basic {
-    fn name(&self) -> &'static str {
-        "Basic"
+    fn name(&self) -> String {
+        format!("Basic(realm={})", self.realm)
     }
 
-    async fn authenticate(
-        &self,
-        req: &rocket::Request,
-        _user_builder: &UserBuilder,
-    ) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Basic::authenticate_with_header(header, req)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

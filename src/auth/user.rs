@@ -1,4 +1,4 @@
-use rocket::{http::Status, request::Outcome};
+use rocket::{http::Status, request::Outcome, Sentinel};
 
 use crate::{
     auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy},
@@ -53,8 +53,7 @@ impl User {
 }
 
 #[rocket::async_trait]
-impl<'r> rocket::request::FromRequest<'r> for &'r User
-{
+impl<'r> rocket::request::FromRequest<'r> for &'r User {
     type Error = AuthenticationError;
 
     async fn from_request(req: &'r rocket::Request<'_>) -> Outcome<Self, Self::Error> {
@@ -94,6 +93,23 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User
                 },
             }
         }
+    }
+}
+
+impl Sentinel for &User {
+    fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
+        let err = "Authentication schemes are not configured. Attach Identity::fairing() on your rocket instance and make sure you have at least one scheme added using add_scheme().";
+        let Some(auth_schemes) = rocket.state::<AuthenticationSchemes>() else {
+            log::error!("{}", err);
+            return true;
+        };
+
+        if auth_schemes.is_empty() {
+            log::error!("{}", err);
+            return true;
+        }
+
+        false
     }
 }
 

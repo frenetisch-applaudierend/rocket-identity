@@ -13,11 +13,11 @@ use crate::{
     config::Config,
 };
 
-pub struct RocketIdentity {
+pub struct Identity {
     config: RwLock<Option<Config>>,
 }
 
-impl RocketIdentity {
+impl Identity {
     pub fn fairing(config: Config) -> Self {
         Self {
             config: RwLock::new(Some(config)),
@@ -26,7 +26,7 @@ impl RocketIdentity {
 }
 
 #[rocket::async_trait]
-impl Fairing for RocketIdentity {
+impl Fairing for Identity {
     fn info(&self) -> Info {
         Info {
             name: "Identity",

@@ -7,7 +7,7 @@ use crate::auth::{user_builder, User};
 #[rocket::async_trait]
 pub trait AuthenticationScheme: Send + Sync {
     /// The name of this authentication scheme.
-    fn name(&self) -> &'static str;
+    fn name(&self) -> String;
 
     /// Setup the authentication scheme. This is called once when the server starts and gives
     /// the scheme a chance to do any necessary setup like registering state.

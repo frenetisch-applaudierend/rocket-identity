@@ -117,8 +117,8 @@ impl JwtBearer {
 
 #[rocket::async_trait]
 impl AuthenticationScheme for JwtBearer {
-    fn name(&self) -> &'static str {
-        "JwtBearer"
+    fn name(&self) -> String {
+        "JwtBearer".to_owned()
     }
 
     fn setup(&mut self, rocket: rocket::Rocket<rocket::Build>) -> rocket::Rocket<rocket::Build> {
@@ -129,11 +129,7 @@ impl AuthenticationScheme for JwtBearer {
         )
     }
 
-    async fn authenticate(
-        &self,
-        req: &rocket::Request,
-        user_builder: &UserBuilder,
-    ) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, user_builder: &UserBuilder) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Self::authenticate_with_header(header, req, user_builder)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

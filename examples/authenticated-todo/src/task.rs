@@ -1,10 +1,12 @@
 use rocket::serde::Serialize;
+use rocket_identity::auth::User;
 use diesel::{self, result::QueryResult, prelude::*};
 
 mod schema {
     table! {
         tasks {
             id -> Nullable<Integer>,
+            owner -> Text,
             description -> Text,
             completed -> Bool,
         }
@@ -21,6 +23,7 @@ use crate::DbConn;
 pub struct Task {
     #[serde(skip_deserializing)]
     pub id: Option<i32>,
+    pub owner: String,
     pub description: String,
     pub completed: bool
 }
@@ -38,9 +41,10 @@ impl Task {
     }
 
     /// Returns the number of affected rows: 1.
-    pub async fn insert(todo: Todo, conn: &DbConn) -> QueryResult<usize> {
+    pub async fn insert(todo: Todo, conn: &DbConn, user: &User) -> QueryResult<usize> {
+        let owner = user.username().to_string();
         conn.run(|c| {
-            let t = Task { id: None, description: todo.description, completed: false };
+            let t = Task { id: None, owner, description: todo.description, completed: false };
             diesel::insert_into(tasks::table).values(&t).execute(c)
         }).await
     }

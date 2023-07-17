@@ -10,10 +10,16 @@ impl Cookie {
     }
 }
 
+impl Default for Cookie {
+    fn default() -> Self {
+        Self::new("rocket_identity".to_string())
+    }
+}
+
 #[rocket::async_trait]
 impl AuthenticationScheme for Cookie {
-    fn name(&self) -> &'static str {
-        "Cookie"
+    fn name(&self) -> String {
+        format!("Cookie(name={})", self.cookie_name)
     }
 
     async fn authenticate(

@@ -3,7 +3,7 @@ use rocket_identity::{
     auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
     config::Config,
     persistence::store::InMemoryUserStore,
-    RocketIdentity,
+    Identity,
 };
 
 #[macro_use]
@@ -22,7 +22,7 @@ async fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![index])
-        .attach(RocketIdentity::fairing(
+        .attach(Identity::fairing(
             Config::new(user_store).add_scheme(Basic::new("Hello")),
         ))
         .attach(AdHoc::on_liftoff("Setup users", |r| {

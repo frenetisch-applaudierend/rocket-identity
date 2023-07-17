@@ -1,20 +1,27 @@
-#[macro_use] extern crate rocket;
-#[macro_use] extern crate rocket_sync_db_pools;
-#[macro_use] extern crate diesel;
+#[macro_use]
+extern crate rocket;
+#[macro_use]
+extern crate rocket_sync_db_pools;
+#[macro_use]
+extern crate diesel;
 
+mod task;
 #[cfg(test)]
 mod tests;
-mod task;
 
-use rocket::{Rocket, Build};
 use rocket::fairing::AdHoc;
+use rocket::form::Form;
+use rocket::fs::{relative, FileServer};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::Serialize;
-use rocket::form::Form;
-use rocket::fs::{FileServer, relative};
+use rocket::{Build, Rocket};
 
 use rocket_dyn_templates::Template;
+
+use rocket_identity::auth::{scheme::cookie::Cookie, User};
+use rocket_identity::persistence::store::InMemoryUserStore;
+use rocket_identity::{config::Config, Identity};
 
 use crate::task::{Task, Todo};
 
@@ -25,14 +32,14 @@ pub struct DbConn(diesel::SqliteConnection);
 #[serde(crate = "rocket::serde")]
 struct Context {
     flash: Option<(String, String)>,
-    tasks: Vec<Task>
+    tasks: Vec<Task>,
 }
 
 impl Context {
     pub async fn err<M: std::fmt::Display>(conn: &DbConn, msg: M) -> Context {
         Context {
             flash: Some(("error".into(), msg.to_string())),
-            tasks: Task::all(conn).await.unwrap_or_default()
+            tasks: Task::all(conn).await.unwrap_or_default(),
         }
     }
 
@@ -43,7 +50,7 @@ impl Context {
                 error_!("DB Task::all() error: {}", e);
                 Context {
                     flash: Some(("error".into(), "Fail to access database.".into())),
-                    tasks: vec![]
+                    tasks: vec![],
                 }
             }
         }
@@ -51,13 +58,16 @@ impl Context {
 }
 
 #[post("/", data = "<todo_form>")]
-async fn new(todo_form: Form<Todo>, conn: DbConn) -> Flash<Redirect> {
+async fn new(todo_form: Form<Todo>, conn: DbConn, user: &User) -> Flash<Redirect> {
     let todo = todo_form.into_inner();
     if todo.description.is_empty() {
         Flash::error(Redirect::to("/"), "Description cannot be empty.")
-    } else if let Err(e) = Task::insert(todo, &conn).await {
+    } else if let Err(e) = Task::insert(todo, &conn, user).await {
         error_!("DB insertion error: {}", e);
-        Flash::error(Redirect::to("/"), "Todo could not be inserted due an internal error.")
+        Flash::error(
+            Redirect::to("/"),
+            "Todo could not be inserted due an internal error.",
+        )
     } else {
         Flash::success(Redirect::to("/"), "Todo successfully added.")
     }
@@ -69,7 +79,10 @@ async fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
         Ok(_) => Ok(Redirect::to("/")),
         Err(e) => {
             error_!("DB toggle({}) error: {}", id, e);
-            Err(Template::render("index", Context::err(&conn, "Failed to toggle task.").await))
+            Err(Template::render(
+                "index",
+                Context::err(&conn, "Failed to toggle task.").await,
+            ))
         }
     }
 }
@@ -80,7 +93,10 @@ async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
         Ok(_) => Ok(Flash::success(Redirect::to("/"), "Todo was deleted.")),
         Err(e) => {
             error_!("DB deletion({}) error: {}", id, e);
-            Err(Template::render("index", Context::err(&conn, "Failed to delete task.").await))
+            Err(Template::render(
+                "index",
+                Context::err(&conn, "Failed to delete task.").await,
+            ))
         }
     }
 }
@@ -96,9 +112,13 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
     const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations");
 
-    DbConn::get_one(&rocket).await
+    DbConn::get_one(&rocket)
+        .await
         .expect("database connection")
-        .run(|conn| { conn.run_pending_migrations(MIGRATIONS).expect("diesel migrations"); })
+        .run(|conn| {
+            conn.run_pending_migrations(MIGRATIONS)
+                .expect("diesel migrations");
+        })
         .await;
 
     rocket
@@ -106,9 +126,12 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> _ {
+    let identity_config = Config::new(InMemoryUserStore::new()).add_scheme(Cookie::default());
+
     rocket::build()
         .attach(DbConn::fairing())
         .attach(Template::fairing())
+        .attach(Identity::fairing(identity_config))
         .attach(AdHoc::on_ignite("Run Migrations", run_migrations))
         .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])

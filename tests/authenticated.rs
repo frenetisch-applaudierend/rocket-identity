@@ -10,7 +10,7 @@ use rocket_identity::{
     auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
     config::Config,
     persistence::store::InMemoryUserStore,
-    RocketIdentity,
+    Identity,
 };
 
 #[get("/authenticated")]
@@ -29,7 +29,7 @@ fn setup() -> Rocket<Build> {
     rocket::build()
         .mount("/", routes![handler])
         .register("/", catchers![catch_unauthorized])
-        .attach(RocketIdentity::fairing(config))
+        .attach(Identity::fairing(config))
         .attach(AdHoc::on_liftoff("User setup", |r| Box::pin(initialize(r))))
 }
 

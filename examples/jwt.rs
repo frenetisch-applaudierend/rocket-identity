@@ -12,7 +12,7 @@ use rocket_identity::{
     },
     config::Config,
     persistence::store::InMemoryUserStore,
-    RocketIdentity,
+    Identity,
 };
 
 #[macro_use]
@@ -88,7 +88,7 @@ fn rocket() -> _ {
 
     rocket::build()
         .mount("/", routes![login, index, admin])
-        .attach(RocketIdentity::fairing(config))
+        .attach(Identity::fairing(config))
         .attach(AdHoc::on_liftoff("User setup", |r| {
             Box::pin(setup_users(r))
         }))

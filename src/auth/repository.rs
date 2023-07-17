@@ -107,7 +107,7 @@ impl<'r> FromRequest<'r> for &'r UserRepository {
 impl Sentinel for &UserRepository {
     fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
         if rocket.state::<UserRepository>().is_none() {
-            log::error!("UserRepository is not configured. Attach RocketIdentity::fairing() on your rocket instance.");
+            log::error!("UserRepository is not configured. Attach Identity::fairing() on your rocket instance.");
             true
         } else {
             false
