@@ -21,7 +21,7 @@ use rocket_dyn_templates::Template;
 
 use rocket_identity::auth::{scheme::cookie::Cookie, User};
 use rocket_identity::persistence::store::InMemoryUserStore;
-use rocket_identity::{config::Config, Identity};
+use rocket_identity::Identity;
 
 use crate::task::{Task, Todo};
 
@@ -126,7 +126,7 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> _ {
-    let identity_config = Config::new(InMemoryUserStore::new()).add_scheme(Cookie::default());
+    let identity_config = Identity::config(InMemoryUserStore::new()).add_scheme(Cookie::default());
 
     rocket::build()
         .attach(DbConn::fairing())

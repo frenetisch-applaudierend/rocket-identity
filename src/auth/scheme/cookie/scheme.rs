@@ -1,5 +1,6 @@
 use crate::auth::scheme::prelude::*;
 
+#[derive(Debug)]
 pub struct Cookie {
     cookie_name: String,
 }
@@ -22,11 +23,7 @@ impl AuthenticationScheme for Cookie {
         format!("Cookie(name={})", self.cookie_name)
     }
 
-    async fn authenticate(
-        &self,
-        req: &rocket::Request,
-        _user_builder: &UserBuilder,
-    ) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
         let _repository = req.user_repository();
         let cookies = req.cookies();
 

@@ -5,7 +5,7 @@ use crate::auth::{user_builder, User};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
-pub trait AuthenticationScheme: Send + Sync {
+pub trait AuthenticationScheme: Send + Sync + core::fmt::Debug {
     /// The name of this authentication scheme.
     fn name(&self) -> String;
 

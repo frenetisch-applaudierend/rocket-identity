@@ -3,6 +3,7 @@ use rocket::Request;
 
 use crate::auth::{scheme::prelude::*, LoginError};
 
+#[derive(Debug)]
 pub struct Basic {
     realm: String,
     challenge: String,

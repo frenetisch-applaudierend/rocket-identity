@@ -4,5 +4,5 @@ pub use super::AuthenticationError;
 pub use super::AuthenticationScheme;
 pub use super::Outcome;
 
-pub use crate::auth::UserRepositoryAccessor;
+pub use crate::Services;
 pub use crate::auth::{ClaimValue, Claims, Roles, UserBuilder, UserData};

@@ -10,7 +10,7 @@ use yansi::Paint;
 
 use crate::{
     auth::{scheme::AuthenticationSchemes, UserRepository},
-    config::Config, Identity,
+    config::Config, Identity, Services,
 };
 
 impl Identity {
@@ -59,9 +59,7 @@ impl Fairing for Identity {
         rocket::info!("{}{}:", Paint::emoji("🔐 "), Paint::magenta("Identity"));
 
         // Log authentication schemes
-        let auth_schemes = rocket
-            .state::<AuthenticationSchemes>()
-            .expect("Missing authentication schemes");
+        let auth_schemes = rocket.authentication_schemes();
 
         if auth_schemes.is_empty() {
             rocket::warn_!("No authentication schemes configured");
@@ -81,10 +79,7 @@ impl Fairing for Identity {
         }
 
         // Add WWW-Authenticate header for each authentication scheme
-        let auth_schemes = req
-            .rocket()
-            .state::<AuthenticationSchemes>()
-            .expect("Missing authentication schemes");
+        let auth_schemes = req.authentication_schemes();
 
         for scheme in auth_schemes.iter() {
             scheme.challenge(res).await;

@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     auth,
-    persistence::{self, UserStore},
+    persistence::{self, UserStore}, Services,
 };
 
 use super::{hasher::PasswordHasher, Claims, Roles, User, UserData};
@@ -112,24 +112,6 @@ impl Sentinel for &UserRepository {
         } else {
             false
         }
-    }
-}
-
-pub trait UserRepositoryAccessor {
-    fn user_repository(&self) -> &UserRepository;
-}
-
-impl<'r> UserRepositoryAccessor for Request<'r> {
-    fn user_repository(&self) -> &UserRepository {
-        self.rocket()
-            .state::<UserRepository>()
-            .expect("Missing required UserRepository")
-    }
-}
-
-impl UserRepositoryAccessor for rocket::Rocket<rocket::Orbit> {
-    fn user_repository(&self) -> &UserRepository {
-        self.state().expect("Missing required UserRepository")
     }
 }
 

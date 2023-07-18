@@ -2,7 +2,7 @@ use rocket::{http::Status, request::Outcome, Sentinel};
 
 use crate::{
     auth::scheme::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy},
-    persistence,
+    persistence, InternalServices, Services,
 };
 
 use super::{scheme::AuthenticationError, Claims, Roles, UserData};
@@ -72,15 +72,8 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
         ) -> Outcome<User, AuthenticationError> {
             use rocket::outcome::Outcome::*;
 
-            let missing_auth_policy = req
-                .rocket()
-                .state::<MissingAuthPolicy>()
-                .expect("Missing auth policy not configured");
-
-            let schemes = req
-                .rocket()
-                .state::<AuthenticationSchemes>()
-                .expect("Missing required AuthenticationSchemeCollection");
+            let missing_auth_policy = req.missing_auth_policy();
+            let schemes = req.authentication_schemes();
 
             match schemes.authenticate(req).await {
                 Success(user) => Success(user),

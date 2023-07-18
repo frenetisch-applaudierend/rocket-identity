@@ -2,6 +2,7 @@ use crate::{
     auth::hasher::{Argon2PasswordHasher, PasswordHasher},
     auth::{AuthenticationScheme, MissingAuthPolicy},
     persistence::UserStore,
+    Identity,
 };
 
 pub struct Config {
@@ -21,10 +22,7 @@ impl Config {
         }
     }
 
-    pub fn with_password_hasher(
-        self,
-        password_hasher: impl PasswordHasher + 'static,
-    ) -> Self {
+    pub fn with_password_hasher(self, password_hasher: impl PasswordHasher + 'static) -> Self {
         Self {
             user_store: self.user_store,
             password_hasher: Box::new(password_hasher),
@@ -45,5 +43,11 @@ impl Config {
     pub fn add_scheme(mut self, scheme: impl AuthenticationScheme + 'static) -> Self {
         self.auth_schemes.push(Box::new(scheme));
         self
+    }
+}
+
+impl Identity {
+    pub fn config(user_store: impl UserStore + 'static) -> Config {
+        Config::new(user_store)
     }
 }

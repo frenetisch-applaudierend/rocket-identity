@@ -7,6 +7,7 @@ use crate::auth::scheme::prelude::*;
 
 use super::JwtConfig;
 
+#[derive(Debug)]
 pub struct JwtBearer {
     challenge: &'static str,
     config: Option<JwtConfig>,

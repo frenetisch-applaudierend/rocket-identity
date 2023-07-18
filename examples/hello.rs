@@ -1,9 +1,9 @@
 use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
-    auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
-    config::Config,
+    auth::{scheme::basic::Basic, User, UserData},
     persistence::store::InMemoryUserStore,
     Identity,
+    Services
 };
 
 #[macro_use]
@@ -23,7 +23,7 @@ async fn rocket() -> _ {
     rocket::build()
         .mount("/", routes![index])
         .attach(Identity::fairing(
-            Config::new(user_store).add_scheme(Basic::new("Hello")),
+            Identity::config(user_store).add_scheme(Basic::new("Hello")),
         ))
         .attach(AdHoc::on_liftoff("Setup users", |r| {
             Box::pin(setup_users(r))

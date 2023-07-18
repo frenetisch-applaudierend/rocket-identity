@@ -8,11 +8,10 @@ use rocket::{
 use rocket_identity::{
     auth::{
         scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-        User, UserData, UserRepository, UserRepositoryAccessor,
+        User, UserData, UserRepository,
     },
-    config::Config,
     persistence::store::InMemoryUserStore,
-    Identity,
+    Identity, Services,
 };
 
 #[macro_use]
@@ -84,7 +83,7 @@ fn rocket() -> _ {
         deconding_key: DecodingKey::from_secret(secret),
     };
 
-    let config = Config::new(user_store).add_scheme(JwtBearer::new(jwt_config));
+    let config = Identity::config(user_store).add_scheme(JwtBearer::new(jwt_config));
 
     rocket::build()
         .mount("/", routes![login, index, admin])

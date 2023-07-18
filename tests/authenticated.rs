@@ -7,10 +7,9 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{scheme::basic::Basic, User, UserData, UserRepositoryAccessor},
-    config::Config,
+    auth::{scheme::basic::Basic, User, UserData},
     persistence::store::InMemoryUserStore,
-    Identity,
+    Identity, Services,
 };
 
 #[get("/authenticated")]
@@ -24,7 +23,7 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 }
 
 fn setup() -> Rocket<Build> {
-    let config = Config::new(InMemoryUserStore::new()).add_scheme(Basic::new("Server"));
+    let config = Identity::config(InMemoryUserStore::new()).add_scheme(Basic::new("Server"));
 
     rocket::build()
         .mount("/", routes![handler])

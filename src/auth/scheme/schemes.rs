@@ -5,7 +5,8 @@ use crate::auth::UserBuilder;
 use super::{AuthenticationScheme, Outcome};
 
 /// A collection of authentication schemes.
-pub(crate) struct AuthenticationSchemes(Vec<Box<dyn AuthenticationScheme>>);
+#[derive(Debug)]
+pub struct AuthenticationSchemes(Vec<Box<dyn AuthenticationScheme>>);
 
 impl AuthenticationSchemes {
     /// Create a new collection of authentication schemes.
