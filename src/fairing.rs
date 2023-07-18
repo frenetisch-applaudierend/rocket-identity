@@ -10,12 +10,8 @@ use yansi::Paint;
 
 use crate::{
     auth::{scheme::AuthenticationSchemes, UserRepository},
-    config::Config,
+    config::Config, Identity,
 };
-
-pub struct Identity {
-    config: RwLock<Option<Config>>,
-}
 
 impl Identity {
     pub fn fairing(config: Config) -> Self {
@@ -81,12 +77,6 @@ impl Fairing for Identity {
     async fn on_response<'r>(&self, req: &'r rocket::Request<'_>, res: &mut rocket::Response<'r>) {
         // Only listen for status 401 Unauthorized
         if res.status() != Status::Unauthorized {
-            return;
-        }
-
-        // If an existing WWW-Authenticate header is present we just leave it
-        // under the assumption, that the request handler wants a specific value.
-        if res.headers().contains("WWW-Authenticate") {
             return;
         }
 
