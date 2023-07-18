@@ -1,6 +1,6 @@
+use diesel::{self, prelude::*, result::QueryResult};
 use rocket::serde::Serialize;
-use rocket_identity::auth::User;
-use diesel::{self, result::QueryResult, prelude::*};
+use rocket_identity::User;
 
 mod schema {
     table! {
@@ -25,7 +25,7 @@ pub struct Task {
     pub id: Option<i32>,
     pub owner: String,
     pub description: String,
-    pub completed: bool
+    pub completed: bool,
 }
 
 #[derive(Debug, FromForm)]
@@ -35,36 +35,46 @@ pub struct Todo {
 
 impl Task {
     pub async fn all(conn: &DbConn) -> QueryResult<Vec<Task>> {
-        conn.run(|c| {
-            tasks::table.order(tasks::id.desc()).load::<Task>(c)
-        }).await
+        conn.run(|c| tasks::table.order(tasks::id.desc()).load::<Task>(c))
+            .await
     }
 
     /// Returns the number of affected rows: 1.
     pub async fn insert(todo: Todo, conn: &DbConn, user: &User) -> QueryResult<usize> {
         let owner = user.username().to_string();
         conn.run(|c| {
-            let t = Task { id: None, owner, description: todo.description, completed: false };
+            let t = Task {
+                id: None,
+                owner,
+                description: todo.description,
+                completed: false,
+            };
             diesel::insert_into(tasks::table).values(&t).execute(c)
-        }).await
+        })
+        .await
     }
 
     /// Returns the number of affected rows: 1.
     pub async fn toggle_with_id(id: i32, conn: &DbConn) -> QueryResult<usize> {
         conn.run(move |c| {
-            let task = tasks::table.filter(tasks::id.eq(id)).get_result::<Task>(c)?;
+            let task = tasks::table
+                .filter(tasks::id.eq(id))
+                .get_result::<Task>(c)?;
             let new_status = !task.completed;
             let updated_task = diesel::update(tasks::table.filter(tasks::id.eq(id)));
             updated_task.set(tasks::completed.eq(new_status)).execute(c)
-        }).await
+        })
+        .await
     }
 
     /// Returns the number of affected rows: 1.
     pub async fn delete_with_id(id: i32, conn: &DbConn) -> QueryResult<usize> {
-        conn.run(move |c| diesel::delete(tasks::table)
-            .filter(tasks::id.eq(id))
-            .execute(c))
-            .await
+        conn.run(move |c| {
+            diesel::delete(tasks::table)
+                .filter(tasks::id.eq(id))
+                .execute(c)
+        })
+        .await
     }
 
     /// Returns the number of affected rows.

@@ -7,9 +7,9 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{schemes::basic::Basic, User, UserData},
     persistence::store::InMemoryUserStore,
-    Identity, Services,
+    schemes::basic::Basic,
+    {Identity, Services, User, UserData},
 };
 
 #[get("/authenticated")]

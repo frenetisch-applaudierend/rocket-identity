@@ -6,12 +6,9 @@ use rocket::{
     Orbit, Rocket,
 };
 use rocket_identity::{
-    auth::{
-        schemes::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-        User, UserData, UserRepository,
-    },
     persistence::store::InMemoryUserStore,
-    Identity, Services,
+    schemes::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
+    {Identity, Services, User, UserData, UserRepository},
 };
 
 #[macro_use]
