@@ -7,7 +7,7 @@ use rocket::{
 };
 use rocket_identity::{
     auth::{
-        scheme::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
+        schemes::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
         User, UserData, UserRepository,
     },
     persistence::store::InMemoryUserStore,

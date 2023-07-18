@@ -9,7 +9,7 @@ use tokio::sync::RwLock;
 use yansi::Paint;
 
 use crate::{
-    auth::{scheme::AuthenticationSchemes, UserRepository},
+    auth::{schemes::AuthenticationSchemes, UserRepository},
     config::Config, Identity, Services,
 };
 

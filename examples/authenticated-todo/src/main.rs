@@ -19,7 +19,7 @@ use rocket::{Build, Rocket};
 
 use rocket_dyn_templates::Template;
 
-use rocket_identity::auth::{scheme::cookie::Cookie, User};
+use rocket_identity::auth::{schemes::cookie::Cookie, User};
 use rocket_identity::persistence::store::InMemoryUserStore;
 use rocket_identity::Identity;
 

@@ -7,7 +7,7 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    auth::{scheme::basic::Basic, User, UserData},
+    auth::{schemes::basic::Basic, User, UserData},
     persistence::store::InMemoryUserStore,
     Identity, Services,
 };

@@ -1,6 +1,6 @@
 use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
-    auth::{scheme::basic::Basic, User, UserData},
+    auth::{schemes::basic::Basic, User, UserData},
     persistence::store::InMemoryUserStore,
     Identity,
     Services

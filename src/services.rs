@@ -1,6 +1,6 @@
 use rocket::{Request, Orbit, Rocket};
 
-use crate::auth::{scheme::AuthenticationSchemes, MissingAuthPolicy, UserRepository};
+use crate::auth::{schemes::AuthenticationSchemes, MissingAuthPolicy, UserRepository};
 
 pub trait Services {
     fn user_repository(&self) -> &UserRepository;

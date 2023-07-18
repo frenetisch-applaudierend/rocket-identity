@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use jsonwebtoken::{decode, Algorithm, TokenData, Validation};
 use rocket::{serde::json::Value, Request};
 
-use crate::auth::scheme::prelude::*;
+use crate::auth::schemes::prelude::*;
 
 use super::JwtConfig;
 
