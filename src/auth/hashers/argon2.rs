@@ -1,9 +1,9 @@
 use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
-    PasswordHash, PasswordHasher, PasswordVerifier,
+    PasswordHasher as _, PasswordVerifier as _,
 };
 
-use crate::{util::Result, UserData};
+use crate::hashers::impls::prelude::*;
 
 #[derive(Default, Clone)]
 pub struct Argon2PasswordHasher {
@@ -18,22 +18,25 @@ impl Argon2PasswordHasher {
     }
 }
 
-impl crate::PasswordHasher for Argon2PasswordHasher {
-    fn hash_password(&self, _user: &UserData, password: &str) -> Result<Vec<u8>> {
+impl PasswordHasher for Argon2PasswordHasher {
+    fn hash_password(&self, _user: &User, password: &str) -> Result<PasswordHash> {
         let salt = SaltString::generate(OsRng);
-        let password_hash = self.ctx.hash_password(password.as_bytes(), &salt)?;
+        let password_hash = self
+            .ctx
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
 
-        Ok(password_hash.to_string().into_bytes())
+        Ok(password_hash.into())
     }
 
     fn verify_password(
         &self,
-        _user: &UserData,
-        password_hash: &[u8],
+        _user: &User,
+        password_hash: &PasswordHash,
         password: &str,
     ) -> crate::util::Result<bool> {
-        let password_hash = std::str::from_utf8(password_hash)?;
-        let password_hash = PasswordHash::new(password_hash)?;
+        let password_hash = std::str::from_utf8(password_hash.as_bytes())?;
+        let password_hash = argon2::PasswordHash::new(password_hash)?;
 
         Ok(self
             .ctx

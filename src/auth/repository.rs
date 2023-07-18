@@ -5,12 +5,7 @@ use rocket::{
 
 use tokio::sync::RwLock;
 
-use crate::{
-    auth,
-    persistence::{self, UserStore}, Services,
-};
-
-use super::{PasswordHasher, Claims, Roles, User, UserData};
+use crate::{PasswordHasher, Services, User, UserStore};
 
 pub struct UserRepository {
     pub user_store: RwLock<Box<dyn UserStore>>,
@@ -24,74 +19,55 @@ impl UserRepository {
     ) -> Self {
         Self {
             user_store: RwLock::new(user_store),
-            password_hasher: password_hasher,
+            password_hasher,
         }
     }
 
-    pub async fn authenticate(
-        &self,
-        username: &str,
-        password: &str,
-    ) -> Result<User, LoginError> {
+    pub async fn authenticate(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let user_store = self.user_store.read().await;
 
-        let Some(repo_user) = user_store.find_user_by_username(username).await.map_err(|err| {
-            log::error!("Failed to find user by username: {}", err);
-            LoginError::Other
-        })? else {
+        let Some(user) = user_store.find_user_by_username(username).await
+            .map_err(LoginError::to_other("Failed to find user by username"))? else {
             return Err(LoginError::UserNotFound);
         };
 
-        let user_data = UserData {
-            username: repo_user.username,
-            claims: Claims::from_inner(repo_user.claims),
-            roles: Roles::from_inner(repo_user.roles),
-        };
-
-        let Some(password_hash) = repo_user.password_hash else {
+        let Some(password_hash) = user_store.password_hash(&user).await
+            .map_err(LoginError::to_other("Failed to retrieve password hash"))? else {
             return Err(LoginError::MissingPassword);
         };
 
         if !self
             .password_hasher
-            .verify_password(&user_data, &password_hash, password)
-            .map_err(|e| {
-                log::error!("Failed to verify password: {}", e);
-                LoginError::Other
-            })?
+            .verify_password(&user, &password_hash, password)
+            .map_err(LoginError::to_other("Failed to verify password"))?
         {
             return Err(LoginError::IncorrectPassword);
         }
 
-        Ok(auth::User::from_data(user_data))
+        Ok(user)
     }
 
     pub async fn add_user(
         &self,
-        data: UserData,
+        user: &User,
         password: Option<&str>,
-    ) -> Result<User, AddUserError> {
+    ) -> Result<(), AddUserError> {
+        // Hash the user password
         let password_hash = password
-            .map(|p| {
-                self.password_hasher.hash_password(&data, p).map_err(|e| {
-                    log::error!("Failed to hash password: {}", e);
-                    AddUserError::Other
-                })
-            })
-            .transpose()?;
-
-        let mut user = persistence::User::from_data(data, password_hash);
+            .map(|p| self.password_hasher.hash_password(user, p))
+            .transpose()
+            .map_err(AddUserError::to_other("Failed to hash password"))?;
 
         let mut user_store = self.user_store.write().await;
 
         // TODO: Check if user already exists
 
-        user_store.add_user(&mut user).await.map_err(|e| {
-            log::error!("Failed to add user to store: {}", e);
-            AddUserError::Other
-        })?;
+        user_store
+            .add_user(user, password_hash.as_ref())
+            .await
+            .map_err(AddUserError::to_other("Failed to add user to store"))?;
 
-        Ok(auth::User::from_repo(user))
+        Ok(())
     }
 }
 
@@ -130,8 +106,26 @@ pub enum LoginError {
     Other,
 }
 
+impl LoginError {
+    fn to_other(msg: &'static str) -> impl FnOnce(Box<dyn std::error::Error>) -> Self {
+        move |e| {
+            log::error!("{}: {}", msg, e);
+            Self::Other
+        }
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum AddUserError {
     #[error("Some other error happened")]
     Other,
+}
+
+impl AddUserError {
+    fn to_other(msg: &'static str) -> impl FnOnce(Box<dyn std::error::Error>) -> Self {
+        move |e| {
+            log::error!("{}: {}", msg, e);
+            Self::Other
+        }
+    }
 }

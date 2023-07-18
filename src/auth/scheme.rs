@@ -1,6 +1,6 @@
 use rocket::{http::Status, Request};
 
-use crate::{config::MissingAuthPolicy, User, UserBuilder};
+use crate::{config::MissingAuthPolicy, User};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
@@ -17,7 +17,7 @@ pub trait AuthenticationScheme: Send + Sync + core::fmt::Debug {
     /// Try to authenticate a user. If the user is successfully authenticated, mutate the user with the correct values and return Success.
     /// If authentication was applicable but failed, return Failure with an appropriate HTTP status code and an error describing the problem.
     /// If authentication was not applicable, return Forward.
-    async fn authenticate(&self, req: &rocket::Request, user_builder: &UserBuilder) -> Outcome;
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome;
 
     /// Add challenge information for the client to the response.
     /// Usually by adding a WWW-Authenticate header for this authentication scheme.
@@ -100,9 +100,8 @@ impl AuthenticationSchemes {
 
     /// Try to authenticate a user using the authentication schemes in order.
     pub async fn authenticate(&self, req: &Request<'_>) -> Outcome {
-        let user_builder = UserBuilder::new();
         for scheme in self.iter() {
-            match scheme.authenticate(req, &user_builder).await {
+            match scheme.authenticate(req).await {
                 Outcome::Success(user) => {
                     user.validate()
                         .expect("Scheme created an invalid user. This is a programming error.");

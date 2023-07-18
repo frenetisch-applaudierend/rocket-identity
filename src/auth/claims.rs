@@ -36,18 +36,6 @@ impl Claims {
     }
 }
 
-impl Claims {
-    /// Create a new Claims object from a HashMap.
-    pub(crate) fn from_inner(claims: HashMap<String, ClaimValue>) -> Self {
-        Self { claims }
-    }
-
-    /// Get the inner HashMap from the Claims object.
-    pub(crate) fn into_inner(self) -> HashMap<String, ClaimValue> {
-        self.claims
-    }
-}
-
 /// A representation of valid claim values.
 #[derive(Debug, Clone)]
 pub enum ClaimValue {

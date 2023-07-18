@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::Request;
 
-use crate::{schemes::prelude::*, LoginError};
+use crate::{schemes::impls::prelude::*, LoginError};
 
 #[derive(Debug)]
 pub struct Basic {
@@ -60,7 +60,7 @@ impl AuthenticationScheme for Basic {
         format!("Basic(realm={})", self.realm)
     }
 
-    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
         for header in req.headers().get("Authorization") {
             match (Basic::authenticate_with_header(header, req)).await {
                 Outcome::Success(user) => return Outcome::Success(user),

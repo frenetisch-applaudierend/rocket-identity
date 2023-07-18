@@ -1,36 +1,31 @@
-use crate::PasswordHasher;
-use crate::{util::Result, UserData};
+use crate::hashers::impls::prelude::*;
 
 pub struct IdentityPasswordHasher;
 
 impl PasswordHasher for IdentityPasswordHasher {
-    fn hash_password(&self, _user: &UserData, password: &str) -> Result<Vec<u8>> {
-        Ok(password.bytes().collect())
+    fn hash_password(&self, _user: &User, password: &str) -> Result<PasswordHash> {
+        Ok(password.as_bytes().into())
     }
 
     fn verify_password(
         &self,
-        _user: &UserData,
-        password_hash: &[u8],
+        _user: &User,
+        password_hash: &PasswordHash,
         password: &str,
     ) -> Result<bool> {
-        Ok(password.as_bytes() == password_hash)
+        Ok(password.as_bytes() == password_hash.as_bytes())
     }
 }
 
 #[cfg(test)]
 mod test {
-    use crate::{PasswordHasher, UserData};
+    use crate::{PasswordHasher, User};
 
     #[test]
     fn test_roundtrip() {
         let hasher = super::IdentityPasswordHasher;
 
-        let user = UserData {
-            username: "user1".to_owned(),
-            claims: Default::default(),
-            roles: Default::default(),
-        };
+        let user = User::with_username("user1");
 
         let password = "my super secure password";
 
@@ -48,11 +43,7 @@ mod test {
     fn test_invalid() {
         let hasher = super::IdentityPasswordHasher;
 
-        let user = UserData {
-            username: "user1".to_owned(),
-            claims: Default::default(),
-            roles: Default::default(),
-        };
+        let user = User::with_username("user1");
 
         let password = "my super secure password";
         let wrong_password = "wrong password";

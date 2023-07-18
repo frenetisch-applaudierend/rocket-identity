@@ -7,14 +7,14 @@ use rocket::{
     routes, Build, Request, Rocket,
 };
 use rocket_identity::{
-    persistence::store::InMemoryUserStore,
     schemes::basic::Basic,
-    {Identity, Services, User, UserData},
+    stores::InMemoryUserStore,
+    {Identity, Services, User},
 };
 
 #[get("/authenticated")]
 fn handler(user: &User) -> &str {
-    user.username()
+    user.username.as_str()
 }
 
 #[catch(401)]
@@ -35,7 +35,7 @@ fn setup() -> Rocket<Build> {
 async fn initialize(rocket: &Rocket<rocket::Orbit>) {
     let repo = rocket.user_repository();
 
-    repo.add_user(UserData::with_username("user1"), Some("pass1"))
+    repo.add_user(&User::with_username("user1"), Some("pass1"))
         .await
         .expect("Could not add user");
 }

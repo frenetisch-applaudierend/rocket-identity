@@ -1,29 +1,29 @@
-use crate::schemes::prelude::*;
+use crate::schemes::impls::prelude::*;
 
 #[derive(Debug)]
-pub struct Cookie {
+pub struct CookieScheme {
     cookie_name: String,
 }
 
-impl Cookie {
+impl CookieScheme {
     pub fn new(cookie_name: String) -> Self {
         Self { cookie_name }
     }
 }
 
-impl Default for Cookie {
+impl Default for CookieScheme {
     fn default() -> Self {
         Self::new("rocket_identity".to_string())
     }
 }
 
 #[rocket::async_trait]
-impl AuthenticationScheme for Cookie {
+impl AuthenticationScheme for CookieScheme {
     fn name(&self) -> String {
         format!("Cookie(name={})", self.cookie_name)
     }
 
-    async fn authenticate(&self, req: &rocket::Request, _user_builder: &UserBuilder) -> Outcome {
+    async fn authenticate(&self, req: &rocket::Request) -> Outcome {
         let _repository = req.user_repository();
         let cookies = req.cookies();
 

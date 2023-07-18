@@ -1,6 +1,5 @@
-mod user;
+mod store;
 
-pub mod store;
+pub mod stores;
 
-pub use store::UserStore;
-pub use user::*;
+pub use store::*;

@@ -1,46 +1,26 @@
 use rocket::{http::Status, request::Outcome, Sentinel};
 
 use crate::{
-    config::MissingAuthPolicy, persistence, AuthenticationError, AuthenticationSchemes, Claims,
-    FromAuthError, InternalServices, Roles, Services, UserData,
+    config::MissingAuthPolicy, AuthenticationError, AuthenticationSchemes, Claims, FromAuthError,
+    InternalServices, Roles, Services,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct User {
-    username: String,
-    claims: Claims,
-    roles: Roles,
+    pub username: String,
+    pub claims: Claims,
+    pub roles: Roles,
 }
 
 impl User {
-    pub(crate) fn from_data(user_data: UserData) -> Self {
+    pub fn with_username(username: impl Into<String>) -> Self {
         Self {
-            username: user_data.username,
-            claims: user_data.claims,
-            roles: user_data.roles,
+            username: username.into(),
+            claims: Claims::new(),
+            roles: Roles::new(),
         }
     }
-
-    pub(crate) fn from_repo(repo_user: persistence::User) -> Self {
-        Self {
-            username: repo_user.username,
-            claims: Claims::from_inner(repo_user.claims),
-            roles: Roles::from_inner(repo_user.roles),
-        }
-    }
-
-    pub fn username(&self) -> &str {
-        &self.username
-    }
-
-    pub fn claims(&self) -> &Claims {
-        &self.claims
-    }
-
-    pub fn roles(&self) -> &Roles {
-        &self.roles
-    }
-
+    
     pub fn validate(&self) -> Result<(), UserValidationError> {
         if self.username.is_empty() {
             return Err(UserValidationError::MissingUsername);

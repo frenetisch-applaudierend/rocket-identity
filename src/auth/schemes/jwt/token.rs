@@ -25,10 +25,10 @@ impl<'r> JwtTokenProvider<'r> {
         let now = OffsetDateTime::now_utc();
 
         let mut other = HashMap::new();
-        other.insert("roles".to_string(), user.roles().iter().collect());
+        other.insert("roles".to_string(), user.roles.iter().collect());
 
         let claims = Claims {
-            sub: user.username().to_string(),
+            sub: user.username.clone(),
             nbf: now.into(),
             iat: now.into(),
             exp: (now + Duration::days(180)).into(),

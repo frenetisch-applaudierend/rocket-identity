@@ -1,8 +1,8 @@
 use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
-    persistence::store::InMemoryUserStore,
     schemes::basic::Basic,
-    {Identity, Services, User, UserData},
+    stores::InMemoryUserStore,
+    {Identity, Services, User},
 };
 
 #[macro_use]
@@ -10,7 +10,7 @@ extern crate rocket;
 
 #[get("/")]
 fn index(user: &User) -> String {
-    format!("Hello, {}!", user.username())
+    format!("Hello, {}!", user.username)
 }
 
 #[launch]
@@ -32,11 +32,11 @@ async fn rocket() -> _ {
 async fn setup_users(rocket: &Rocket<Orbit>) {
     let repo = rocket.user_repository();
 
-    repo.add_user(UserData::with_username("user1"), Some("pass1"))
+    repo.add_user(&User::with_username("user1"), Some("pass1"))
         .await
         .expect("Could not add user");
 
-    let mut admin = UserData::with_username("admin");
+    let admin = &mut User::with_username("admin");
     admin.roles.add("admin");
     repo.add_user(admin, Some("admin"))
         .await

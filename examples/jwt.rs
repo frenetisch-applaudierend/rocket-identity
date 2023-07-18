@@ -6,9 +6,9 @@ use rocket::{
     Orbit, Rocket,
 };
 use rocket_identity::{
-    persistence::store::InMemoryUserStore,
     schemes::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-    {Identity, Services, User, UserData, UserRepository},
+    stores::InMemoryUserStore,
+    {Identity, Services, User, UserRepository},
 };
 
 #[macro_use]
@@ -59,12 +59,12 @@ async fn login(
 
 #[get("/")]
 fn index(user: &User) -> String {
-    format!("Hello, {}!", user.username())
+    format!("Hello, {}!", user.username)
 }
 
 #[get("/admin")]
 fn admin(user: &User /*_admin: Authorization<Admin>*/) -> String {
-    format!("Hello, Admin {}!", user.username())
+    format!("Hello, Admin {}!", user.username)
 }
 
 #[launch]
@@ -93,11 +93,11 @@ fn rocket() -> _ {
 async fn setup_users(rocket: &Rocket<Orbit>) {
     let repo = rocket.user_repository();
 
-    repo.add_user(UserData::with_username("user1"), Some("pass1"))
+    repo.add_user(&User::with_username("user1"), Some("pass1"))
         .await
         .expect("Could not add user");
 
-    let mut admin = UserData::with_username("admin");
+    let admin = &mut User::with_username("admin");
     admin.roles.add("admin");
     repo.add_user(admin, Some("admin"))
         .await

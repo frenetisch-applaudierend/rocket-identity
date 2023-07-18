@@ -41,7 +41,7 @@ impl Task {
 
     /// Returns the number of affected rows: 1.
     pub async fn insert(todo: Todo, conn: &DbConn, user: &User) -> QueryResult<usize> {
-        let owner = user.username().to_string();
+        let owner = user.username.clone();
         conn.run(|c| {
             let t = Task {
                 id: None,
