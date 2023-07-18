@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::auth::{ClaimValue, UserData};
+use crate::{ClaimValue, UserData};
 
 #[derive(Clone, Debug)]
 pub struct User {

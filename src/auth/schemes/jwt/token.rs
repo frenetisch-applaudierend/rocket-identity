@@ -8,7 +8,7 @@ use rocket::{
     Request,
 };
 
-use crate::auth::User;
+use crate::User;
 
 use super::{Claims, JwtConfig};
 

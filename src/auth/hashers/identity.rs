@@ -1,5 +1,5 @@
 use crate::PasswordHasher;
-use crate::{auth::UserData, util::Result};
+use crate::{util::Result, UserData};
 
 pub struct IdentityPasswordHasher;
 

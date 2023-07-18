@@ -1,4 +1,4 @@
-use crate::auth::schemes::prelude::*;
+use crate::schemes::prelude::*;
 
 #[derive(Debug)]
 pub struct Cookie {

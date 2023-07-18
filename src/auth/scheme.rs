@@ -1,10 +1,6 @@
 use rocket::{http::Status, Request};
-use user_builder::UserBuilder;
 
-use crate::{
-    auth::{user_builder, User},
-    config::MissingAuthPolicy,
-};
+use crate::{config::MissingAuthPolicy, User, UserBuilder};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]

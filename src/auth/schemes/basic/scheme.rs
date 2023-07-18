@@ -1,7 +1,7 @@
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
 use rocket::Request;
 
-use crate::auth::{schemes::prelude::*, LoginError};
+use crate::{schemes::prelude::*, LoginError};
 
 #[derive(Debug)]
 pub struct Basic {

@@ -3,7 +3,7 @@ use argon2::{
     PasswordHash, PasswordHasher, PasswordVerifier,
 };
 
-use crate::{auth::UserData, util::Result};
+use crate::{util::Result, UserData};
 
 #[derive(Default, Clone)]
 pub struct Argon2PasswordHasher {
