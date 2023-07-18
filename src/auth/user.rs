@@ -1,11 +1,9 @@
 use rocket::{http::Status, request::Outcome, Sentinel};
 
 use crate::{
-    auth::schemes::{AuthenticationSchemes, FromAuthError, MissingAuthPolicy},
-    persistence, InternalServices, Services,
+    config::MissingAuthPolicy, persistence, AuthenticationError, AuthenticationSchemes, Claims,
+    FromAuthError, InternalServices, Roles, Services, UserData,
 };
-
-use super::{schemes::AuthenticationError, Claims, Roles, UserData};
 
 #[derive(Debug)]
 pub struct User {

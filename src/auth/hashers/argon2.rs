@@ -18,7 +18,7 @@ impl Argon2PasswordHasher {
     }
 }
 
-impl super::PasswordHasher for Argon2PasswordHasher {
+impl crate::PasswordHasher for Argon2PasswordHasher {
     fn hash_password(&self, _user: &UserData, password: &str) -> Result<Vec<u8>> {
         let salt = SaltString::generate(OsRng);
         let password_hash = self.ctx.hash_password(password.as_bytes(), &salt)?;

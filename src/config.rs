@@ -1,8 +1,7 @@
 use crate::{
-    auth::hasher::{Argon2PasswordHasher, PasswordHasher},
-    auth::{AuthenticationScheme, MissingAuthPolicy},
+    hashers::Argon2PasswordHasher,
     persistence::UserStore,
-    Identity,
+    {AuthenticationScheme, Identity, PasswordHasher},
 };
 
 pub struct Config {
@@ -10,6 +9,12 @@ pub struct Config {
     pub(crate) password_hasher: Box<dyn PasswordHasher>,
     pub(crate) missing_auth_policy: MissingAuthPolicy,
     pub(crate) auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MissingAuthPolicy {
+    Fail,
+    Forward,
 }
 
 impl Config {

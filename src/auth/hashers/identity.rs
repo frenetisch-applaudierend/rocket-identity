@@ -1,6 +1,5 @@
+use crate::PasswordHasher;
 use crate::{auth::UserData, util::Result};
-
-use super::PasswordHasher;
 
 pub struct IdentityPasswordHasher;
 
@@ -21,7 +20,7 @@ impl PasswordHasher for IdentityPasswordHasher {
 
 #[cfg(test)]
 mod test {
-    use crate::auth::{hasher::PasswordHasher, UserData};
+    use crate::{PasswordHasher, UserData};
 
     #[test]
     fn test_roundtrip() {

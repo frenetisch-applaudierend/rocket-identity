@@ -10,7 +10,7 @@ use crate::{
     persistence::{self, UserStore}, Services,
 };
 
-use super::{hasher::PasswordHasher, Claims, Roles, User, UserData};
+use super::{PasswordHasher, Claims, Roles, User, UserData};
 
 pub struct UserRepository {
     pub user_store: RwLock<Box<dyn UserStore>>,
