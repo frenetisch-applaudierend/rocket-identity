@@ -23,6 +23,18 @@ impl UserRepository {
         }
     }
 
+    pub async fn find_by_username(&self, username: &str) -> Result<Option<User>, FindUserError> {
+        let user_store = self.user_store.read().await;
+
+        user_store
+            .find_user_by_username(username)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to find user by username: {}", e);
+                FindUserError::Other
+            })
+    }
+
     pub async fn authenticate(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let user_store = self.user_store.read().await;
 
@@ -47,11 +59,7 @@ impl UserRepository {
         Ok(user)
     }
 
-    pub async fn add_user(
-        &self,
-        user: &User,
-        password: Option<&str>,
-    ) -> Result<(), AddUserError> {
+    pub async fn add_user(&self, user: &User, password: Option<&str>) -> Result<(), AddUserError> {
         // Hash the user password
         let password_hash = password
             .map(|p| self.password_hasher.hash_password(user, p))
@@ -89,6 +97,12 @@ impl Sentinel for &UserRepository {
             false
         }
     }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum FindUserError {
+    #[error("Some other error happened")]
+    Other,
 }
 
 #[derive(Debug, thiserror::Error)]

@@ -1,5 +1,7 @@
 use crate::schemes::impls::prelude::*;
 
+use super::session_data::SessionData;
+
 #[derive(Debug)]
 pub struct CookieScheme {
     cookie_name: String,
@@ -30,14 +32,34 @@ impl AuthenticationScheme for CookieScheme {
     }
 
     async fn authenticate(&self, req: &rocket::Request) -> Outcome {
-        let _repository = req.user_repository();
+        let users = req.user_repository();
         let cookies = req.cookies();
 
-        let Some(_session_cookie) = cookies.get_private(&self.cookie_name) else {
+        let Some(session_cookie) = cookies.get_private(&self.cookie_name) else {
             return Outcome::Forward(());
         };
 
-        todo!()
+        let session_data = match SessionData::try_from(session_cookie) {
+            Ok(session_data) => session_data,
+            Err(e) => {
+                log::error!("Failed to deserialize session data: {}", e);
+                return Outcome::Failure(AuthenticationError::InvalidParams);
+            }
+        };
+
+        let user = match users.find_by_username(&session_data.username).await {
+            Ok(Some(user)) => user,
+            Ok(None) => {
+                log::error!("Failed to find user");
+                return Outcome::Failure(AuthenticationError::Unauthenticated);
+            }
+            Err(e) => {
+                log::error!("Failed to find user: {}", e);
+                return Outcome::Failure(AuthenticationError::Other);
+            }
+        };
+
+        Outcome::Success(user)
     }
 
     async fn challenge(&self, res: &mut rocket::Response) {

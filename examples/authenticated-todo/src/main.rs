@@ -6,9 +6,9 @@ extern crate rocket_sync_db_pools;
 extern crate diesel;
 
 mod task;
-mod user;
 #[cfg(test)]
 mod tests;
+mod user;
 
 use rocket::fairing::AdHoc;
 use rocket::form::Form;
@@ -25,7 +25,7 @@ use rocket_identity::stores::InMemoryUserStore;
 use rocket_identity::{Identity, User, UserRepository};
 
 use crate::task::{Task, Todo};
-use crate::user::Login;
+use crate::user::{Login, Registration};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -115,12 +115,44 @@ fn login_page() -> Template {
 }
 
 #[post("/login", data = "<login_form>")]
-async fn login(login_form: Form<Login<'_>>, users: &UserRepository, session: CookieSession<'_>) -> Result<Redirect, Template> {
-    let user = users.authenticate(&login_form.username, &login_form.password).await.map_err(|e| {
-        error_!("UserRepository::authenticate() error: {}", e);
-        Template::render("login", context! {})
-    })?;
-    
+async fn login(
+    login_form: Form<Login<'_>>,
+    users: &UserRepository,
+    session: CookieSession<'_>,
+) -> Result<Redirect, Template> {
+    let user = users
+        .authenticate(&login_form.username, &login_form.password)
+        .await
+        .map_err(|e| {
+            error_!("UserRepository::authenticate() error: {}", e);
+            Template::render("login", context! {})
+        })?;
+
+    session.sign_in(&user);
+
+    Ok(Redirect::to("/"))
+}
+
+#[get("/register")]
+fn register_page() -> Template {
+    Template::render("register", context! {})
+}
+
+#[post("/register", data = "<registration_form>")]
+async fn register(
+    registration_form: Form<Registration<'_>>,
+    users: &UserRepository,
+    session: CookieSession<'_>,
+) -> Result<Redirect, Template> {
+    let user = User::with_username(registration_form.username);
+    users
+        .add_user(&user, Some(registration_form.password))
+        .await
+        .map_err(|e| {
+            error_!("UserRepository::add_user() error: {}", e);
+            Template::render("register", context! {})
+        })?;
+
     session.sign_in(&user);
 
     Ok(Redirect::to("/"))
@@ -156,5 +188,5 @@ fn rocket() -> _ {
         .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
-        .mount("/user", routes![login_page, login])
+        .mount("/user", routes![login_page, login, register_page, register])
 }

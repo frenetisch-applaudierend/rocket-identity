@@ -1,23 +1,18 @@
+use std::borrow::Cow;
+
 use rocket::{
-    http::{Cookie, CookieJar},
+    http::CookieJar,
     request::{FromRequest, Outcome},
-    serde::{json::serde_json, Deserialize, Serialize},
     Request,
 };
 
 use crate::User;
 
-use super::CookieScheme;
+use super::{session_data::SessionData, CookieScheme};
 
 #[derive(Debug)]
 pub struct CookieSession<'r> {
     cookie_jar: &'r CookieJar<'r>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(crate = "rocket::serde")]
-struct SessionData {
-    pub username: String,
 }
 
 impl<'r> CookieSession<'r> {
@@ -25,14 +20,13 @@ impl<'r> CookieSession<'r> {
         self.sign_in_with_cookie(user, CookieScheme::default_cookie_name())
     }
 
-    pub fn sign_in_with_cookie(&self, user: &User, cookie_name: &str) {
+    pub fn sign_in_with_cookie(&self, user: &User, cookie_name: impl Into<Cow<'static, str>>) {
         let session = SessionData {
             username: user.username.clone(),
         };
-        let session = serde_json::to_string(&session).expect("This should never fail");
 
         self.cookie_jar
-            .add_private(Cookie::new(cookie_name.to_string(), session));
+            .add_private(session.into_cookie(cookie_name));
     }
 }
 
