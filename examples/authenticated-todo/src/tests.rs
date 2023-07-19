@@ -1,9 +1,12 @@
 use super::task::Task;
 
-use rand::{Rng, thread_rng, distributions::Alphanumeric};
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
 
+use rocket::http::{ContentType, Cookie, Status};
 use rocket::local::asynchronous::Client;
-use rocket::http::{Status, ContentType};
+
+use rocket_identity::schemes::cookie::CookieScheme;
+use rocket_identity::User;
 
 // We use a lock to synchronize between tests so DB operations don't collide.
 // For now. In the future, we'll have a nice way to run each test in a DB
@@ -11,18 +14,22 @@ use rocket::http::{Status, ContentType};
 static DB_LOCK: parking_lot::Mutex<()> = parking_lot::const_mutex(());
 
 macro_rules! run_test {
-    (|$client:ident, $conn:ident| $block:expr) => ({
+    (|$client:ident, $conn:ident| $block:expr) => {{
         let _lock = DB_LOCK.lock();
 
         rocket::async_test(async move {
-            let $client = Client::tracked(super::rocket()).await.expect("Rocket client");
+            let $client = Client::tracked(super::rocket())
+                .await
+                .expect("Rocket client");
             let db = super::DbConn::get_one($client.rocket()).await;
             let $conn = db.expect("failed to get database connection for testing");
-            Task::delete_all(&$conn).await.expect("failed to delete all tasks for testing");
+            Task::delete_all(&$conn)
+                .await
+                .expect("failed to delete all tasks for testing");
 
             $block
         })
-    })
+    }};
 }
 
 #[test]
@@ -39,17 +46,20 @@ fn test_index() {
 fn test_insertion_deletion() {
     run_test!(|client, conn| {
         // Get the tasks before making changes.
-        let init_tasks = Task::all(&conn).await.unwrap();
+        let user = User::with_username("testuser");
+        let init_tasks = Task::all(&conn, &user).await.unwrap();
 
         // Issue a request to insert a new task.
-        client.post("/todo")
+        client
+            .post("/todo")
             .header(ContentType::Form)
+            .private_cookie(session_cookie("testuser"))
             .body("description=My+first+task")
             .dispatch()
             .await;
 
         // Ensure we have one more task in the database.
-        let new_tasks = Task::all(&conn).await.unwrap();
+        let new_tasks = Task::all(&conn, &user).await.unwrap();
         assert_eq!(new_tasks.len(), init_tasks.len() + 1);
 
         // Ensure the task is what we expect.
@@ -61,7 +71,7 @@ fn test_insertion_deletion() {
         client.delete(format!("/todo/{}", id)).dispatch().await;
 
         // Ensure it's gone.
-        let final_tasks = Task::all(&conn).await.unwrap();
+        let final_tasks = Task::all(&conn, &user).await.unwrap();
         assert_eq!(final_tasks.len(), init_tasks.len());
         if final_tasks.len() > 0 {
             assert_ne!(final_tasks[0].description, "My first task");
@@ -73,22 +83,31 @@ fn test_insertion_deletion() {
 fn test_toggle() {
     run_test!(|client, conn| {
         // Issue a request to insert a new task; ensure it's not yet completed.
-        client.post("/todo")
+        client
+            .post("/todo")
             .header(ContentType::Form)
+            .private_cookie(session_cookie("testuser"))
             .body("description=test_for_completion")
             .dispatch()
             .await;
 
-        let task = Task::all(&conn).await.unwrap()[0].clone();
+        let user = User::with_username("testuser");
+        let task = Task::all(&conn, &user).await.unwrap()[0].clone();
         assert_eq!(task.completed, false);
 
         // Issue a request to toggle the task; ensure it is completed.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn).await.unwrap()[0].completed, true);
+        client
+            .put(format!("/todo/{}", task.id.unwrap()))
+            .dispatch()
+            .await;
+        assert_eq!(Task::all(&conn, &user).await.unwrap()[0].completed, true);
 
         // Issue a request to toggle the task; ensure it's not completed again.
-        client.put(format!("/todo/{}", task.id.unwrap())).dispatch().await;
-        assert_eq!(Task::all(&conn).await.unwrap()[0].completed, false);
+        client
+            .put(format!("/todo/{}", task.id.unwrap()))
+            .dispatch()
+            .await;
+        assert_eq!(Task::all(&conn, &user).await.unwrap()[0].completed, false);
     })
 }
 
@@ -98,7 +117,8 @@ fn test_many_insertions() {
 
     run_test!(|client, conn| {
         // Get the number of tasks initially.
-        let init_num = Task::all(&conn).await.unwrap().len();
+        let user = User::with_username("testuser");
+        let init_num = Task::all(&conn, &user).await.unwrap().len();
         let mut descs = Vec::new();
 
         for i in 0..ITER {
@@ -109,8 +129,10 @@ fn test_many_insertions() {
                 .map(char::from)
                 .collect();
 
-            client.post("/todo")
+            client
+                .post("/todo")
                 .header(ContentType::Form)
+                .private_cookie(session_cookie("testuser"))
                 .body(format!("description={}", desc))
                 .dispatch()
                 .await;
@@ -119,7 +141,7 @@ fn test_many_insertions() {
             descs.insert(0, desc);
 
             // Ensure the task was inserted properly and all other tasks remain.
-            let tasks = Task::all(&conn).await.unwrap();
+            let tasks = Task::all(&conn, &user).await.unwrap();
             assert_eq!(tasks.len(), init_num + i + 1);
 
             for j in 0..i {
@@ -133,8 +155,10 @@ fn test_many_insertions() {
 fn test_bad_form_submissions() {
     run_test!(|client, _conn| {
         // Submit an empty form. We should get a 422 but no flash error.
-        let res = client.post("/todo")
+        let res = client
+            .post("/todo")
             .header(ContentType::Form)
+            .private_cookie(session_cookie("testuser"))
             .dispatch()
             .await;
 
@@ -143,8 +167,10 @@ fn test_bad_form_submissions() {
 
         // Submit a form with an empty description. We look for 'error' in the
         // cookies which corresponds to flash message being set as an error.
-        let res = client.post("/todo")
+        let res = client
+            .post("/todo")
             .header(ContentType::Form)
+            .private_cookie(session_cookie("testuser"))
             .body("description=")
             .dispatch()
             .await;
@@ -155,16 +181,32 @@ fn test_bad_form_submissions() {
 
         // The flash cookie should still be present and the error message should
         // be rendered the index.
-        let body = client.get("/").dispatch().await.into_string().await.unwrap();
+        let body = client
+            .get("/")
+            .private_cookie(session_cookie("testuser"))
+            .dispatch()
+            .await
+            .into_string()
+            .await
+            .unwrap();
         assert!(body.contains("Description cannot be empty."));
 
         // Check that the flash is cleared upon another visit to the index.
-        let body = client.get("/").dispatch().await.into_string().await.unwrap();
+        let body = client
+            .get("/")
+            .private_cookie(session_cookie("testuser"))
+            .dispatch()
+            .await
+            .into_string()
+            .await
+            .unwrap();
         assert!(!body.contains("Description cannot be empty."));
 
         // Submit a form without a description. Expect a 422 but no flash error.
-        let res = client.post("/todo")
+        let res = client
+            .post("/todo")
             .header(ContentType::Form)
+            .private_cookie(session_cookie("testuser"))
             .body("evil=smile")
             .dispatch()
             .await;
@@ -172,4 +214,13 @@ fn test_bad_form_submissions() {
         assert!(!res.cookies().iter().any(|c| c.value().contains("error")));
         assert_eq!(res.status(), Status::UnprocessableEntity);
     })
+}
+
+fn session_cookie(username: &'static str) -> Cookie<'static> {
+    Cookie::build(
+        CookieScheme::default_cookie_name(),
+        format!("{{ \"username\": \"{}\" }}", username),
+    )
+    .path("/")
+    .finish()
 }

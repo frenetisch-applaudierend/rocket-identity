@@ -6,14 +6,20 @@ pub struct CookieScheme {
 }
 
 impl CookieScheme {
-    pub fn new(cookie_name: String) -> Self {
-        Self { cookie_name }
+    pub fn default_cookie_name() -> &'static str {
+        "rocket_identity"
+    }
+
+    pub fn new(cookie_name: impl Into<String>) -> Self {
+        Self {
+            cookie_name: cookie_name.into(),
+        }
     }
 }
 
 impl Default for CookieScheme {
     fn default() -> Self {
-        Self::new("rocket_identity".to_string())
+        Self::new(Self::default_cookie_name())
     }
 }
 

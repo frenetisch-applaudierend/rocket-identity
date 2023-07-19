@@ -1,0 +1,22 @@
+{% extends "base" %}
+
+{% block content %}
+<div class="container">
+  <p><!--Nothing to see here --></p>
+
+  <div class="row">
+    <h4>Rocket Todo</h4>
+    <form action="/user/login" method="post">
+      <div class="ten columns">
+        <input type="text" placeholder="Username..." name="username" id="username" value="" autofocus
+          class="u-full-width" />
+        <input type="text" placeholder="Password..." name="password" id="password" value="" autofocus
+          class="u-full-width" />
+      </div>
+      <div class="two columns">
+        <input type="submit" value="Login">
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock content %}

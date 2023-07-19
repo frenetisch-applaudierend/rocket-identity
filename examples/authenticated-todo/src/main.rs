@@ -6,6 +6,7 @@ extern crate rocket_sync_db_pools;
 extern crate diesel;
 
 mod task;
+mod user;
 #[cfg(test)]
 mod tests;
 
@@ -17,13 +18,14 @@ use rocket::response::{Flash, Redirect};
 use rocket::serde::Serialize;
 use rocket::{Build, Rocket};
 
-use rocket_dyn_templates::Template;
+use rocket_dyn_templates::{context, Template};
 
+use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
 use rocket_identity::stores::InMemoryUserStore;
-use rocket_identity::schemes::cookie;
-use rocket_identity::{Identity, User};
+use rocket_identity::{Identity, User, UserRepository};
 
 use crate::task::{Task, Todo};
+use crate::user::Login;
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
@@ -36,15 +38,15 @@ struct Context {
 }
 
 impl Context {
-    pub async fn err<M: std::fmt::Display>(conn: &DbConn, msg: M) -> Context {
+    pub async fn err<M: std::fmt::Display>(conn: &DbConn, user: &User, msg: M) -> Context {
         Context {
             flash: Some(("error".into(), msg.to_string())),
-            tasks: Task::all(conn).await.unwrap_or_default(),
+            tasks: Task::all(conn, user).await.unwrap_or_default(),
         }
     }
 
-    pub async fn raw(conn: &DbConn, flash: Option<(String, String)>) -> Context {
-        match Task::all(conn).await {
+    pub async fn raw(conn: &DbConn, user: &User, flash: Option<(String, String)>) -> Context {
+        match Task::all(conn, user).await {
             Ok(tasks) => Context { flash, tasks },
             Err(e) => {
                 error_!("DB Task::all() error: {}", e);
@@ -74,37 +76,54 @@ async fn new(todo_form: Form<Todo>, conn: DbConn, user: &User) -> Flash<Redirect
 }
 
 #[put("/<id>")]
-async fn toggle(id: i32, conn: DbConn) -> Result<Redirect, Template> {
+async fn toggle(id: i32, conn: DbConn, user: &User) -> Result<Redirect, Template> {
     match Task::toggle_with_id(id, &conn).await {
         Ok(_) => Ok(Redirect::to("/")),
         Err(e) => {
             error_!("DB toggle({}) error: {}", id, e);
             Err(Template::render(
                 "index",
-                Context::err(&conn, "Failed to toggle task.").await,
+                Context::err(&conn, user, "Failed to toggle task.").await,
             ))
         }
     }
 }
 
 #[delete("/<id>")]
-async fn delete(id: i32, conn: DbConn) -> Result<Flash<Redirect>, Template> {
+async fn delete(id: i32, conn: DbConn, user: &User) -> Result<Flash<Redirect>, Template> {
     match Task::delete_with_id(id, &conn).await {
         Ok(_) => Ok(Flash::success(Redirect::to("/"), "Todo was deleted.")),
         Err(e) => {
             error_!("DB deletion({}) error: {}", id, e);
             Err(Template::render(
                 "index",
-                Context::err(&conn, "Failed to delete task.").await,
+                Context::err(&conn, user, "Failed to delete task.").await,
             ))
         }
     }
 }
 
 #[get("/")]
-async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn) -> Template {
+async fn index(flash: Option<FlashMessage<'_>>, conn: DbConn, user: &User) -> Template {
     let flash = flash.map(FlashMessage::into_inner);
-    Template::render("index", Context::raw(&conn, flash).await)
+    Template::render("index", Context::raw(&conn, user, flash).await)
+}
+
+#[get("/login")]
+fn login_page() -> Template {
+    Template::render("login", context! {})
+}
+
+#[post("/login", data = "<login_form>")]
+async fn login(login_form: Form<Login<'_>>, users: &UserRepository, session: CookieSession<'_>) -> Result<Redirect, Template> {
+    let user = users.authenticate(&login_form.username, &login_form.password).await.map_err(|e| {
+        error_!("UserRepository::authenticate() error: {}", e);
+        Template::render("login", context! {})
+    })?;
+    
+    session.sign_in(&user);
+
+    Ok(Redirect::to("/"))
 }
 
 async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
@@ -126,7 +145,8 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> _ {
-    let identity_config = Identity::config(InMemoryUserStore::new()).add_scheme(cookie::default());
+    let identity_config =
+        Identity::config(InMemoryUserStore::new()).add_scheme(CookieScheme::default());
 
     rocket::build()
         .attach(DbConn::fairing())
@@ -136,4 +156,5 @@ fn rocket() -> _ {
         .mount("/", FileServer::from(relative!("static")))
         .mount("/", routes![index])
         .mount("/todo", routes![new, toggle, delete])
+        .mount("/user", routes![login_page, login])
 }

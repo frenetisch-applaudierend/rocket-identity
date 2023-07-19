@@ -34,9 +34,15 @@ pub struct Todo {
 }
 
 impl Task {
-    pub async fn all(conn: &DbConn) -> QueryResult<Vec<Task>> {
-        conn.run(|c| tasks::table.order(tasks::id.desc()).load::<Task>(c))
-            .await
+    pub async fn all(conn: &DbConn, user: &User) -> QueryResult<Vec<Task>> {
+        let owner = user.username.clone();
+        conn.run(|c| {
+            tasks::table
+                .filter(tasks::owner.eq(owner))
+                .order(tasks::id.desc())
+                .load::<Task>(c)
+        })
+        .await
     }
 
     /// Returns the number of affected rows: 1.
