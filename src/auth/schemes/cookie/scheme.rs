@@ -28,7 +28,7 @@ impl Default for CookieScheme {
 #[rocket::async_trait]
 impl AuthenticationScheme for CookieScheme {
     fn name(&self) -> String {
-        format!("Cookie(name={})", self.cookie_name)
+        format!("Cookie({})", self.cookie_name)
     }
 
     async fn authenticate(&self, req: &rocket::Request) -> Outcome {

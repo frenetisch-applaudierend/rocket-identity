@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use yansi::Paint;
 
-use crate::{config::Config, Identity, AuthenticationSchemes, UserRepository, Services};
+use crate::{config::Config, AuthenticationSchemes, Identity, Services, UserRepository};
 
 impl Identity {
     pub fn fairing(config: Config) -> Self {
@@ -63,7 +63,7 @@ impl Fairing for Identity {
         }
 
         for scheme in auth_schemes.iter() {
-            rocket::info_!("Authentication scheme: {}", scheme.name());
+            rocket::info_!("Authentication scheme: {}", Paint::default(scheme.name()));
         }
     }
 

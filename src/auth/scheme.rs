@@ -1,4 +1,5 @@
 use rocket::{http::Status, Request};
+use yansi::Paint;
 
 use crate::{config::MissingAuthPolicy, User};
 
@@ -107,9 +108,9 @@ impl AuthenticationSchemes {
                         .expect("Scheme created an invalid user. This is a programming error.");
 
                     rocket::info_!(
-                        "Authenticated: [{}]: User {{ username: \"{}\" }}",
+                        "Authenticated [{}]: {}",
                         scheme.name(),
-                        user.username
+                        Paint::default(format!("User {{ username: \"{}\" }}", user.username)),
                     );
 
                     return Outcome::Success(user);
