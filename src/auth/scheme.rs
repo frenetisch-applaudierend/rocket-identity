@@ -106,6 +106,12 @@ impl AuthenticationSchemes {
                     user.validate()
                         .expect("Scheme created an invalid user. This is a programming error.");
 
+                    rocket::info_!(
+                        "Authenticated: [{}]: User {{ username: \"{}\" }}",
+                        scheme.name(),
+                        user.username
+                    );
+
                     return Outcome::Success(user);
                 }
                 Outcome::Failure(err) => return Outcome::Failure(err),
