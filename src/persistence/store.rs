@@ -1,8 +1,17 @@
-use crate::{util::Result, User, PasswordHash};
+use rocket::{Request, Rocket, Orbit};
+
+use crate::{util::Result, PasswordHash, User};
+
+#[rocket::async_trait]
+pub trait UserStore: Send + Sync + core::fmt::Debug + 'static {
+    async fn create_request_scope<'r>(&self, req: &'r Request<'_>) -> Box<dyn UserStoreScope>;
+
+    async fn create_global_scope(&self, rocket: &Rocket<Orbit>) -> Option<Box<dyn UserStoreScope>>;
+}
 
 /// Trait for an object that persists users.
 #[rocket::async_trait]
-pub trait UserStore: Send + Sync {
+pub trait UserStoreScope: Send + Sync + 'static {
     /// Find a user by their username.
     async fn find_user_by_username(&self, username: &str) -> Result<Option<User>>;
 

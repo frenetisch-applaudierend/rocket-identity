@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use yansi::Paint;
 
-use crate::{config::Config, AuthenticationSchemes, Identity, Services, UserRepository};
+use crate::{config::Config, AuthenticationSchemes, Identity, Services};
 
 impl Identity {
     pub fn fairing(config: Config) -> Self {
@@ -42,14 +42,24 @@ impl Fairing for Identity {
             rocket = scheme.setup(rocket);
         }
 
-        // Create user repository
-        let user_repository = UserRepository::new(user_store, password_hasher);
+        // Add user store if configured
+        if let Some(user_store) = user_store {
+            rocket = rocket.manage(user_store);
+        }
 
-        // Add managed state and return rocket instance
-        Ok(rocket
-            .manage(user_repository)
-            .manage(missing_auth_policy)
-            .manage(auth_schemes))
+        // Add password hasher if configured
+        if let Some(password_hasher) = password_hasher {
+            rocket = rocket.manage(password_hasher);
+        }
+
+        // Add missing auth policy
+        rocket = rocket.manage(missing_auth_policy);
+
+        // Add auth schemes
+        rocket = rocket.manage(auth_schemes);
+
+        // Return the configured rocket instance
+        Ok(rocket)
     }
 
     async fn on_liftoff(&self, rocket: &Rocket<Orbit>) {

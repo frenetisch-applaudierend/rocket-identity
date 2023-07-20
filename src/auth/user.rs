@@ -20,7 +20,7 @@ impl User {
             roles: Roles::new(),
         }
     }
-    
+
     pub fn validate(&self) -> Result<(), UserValidationError> {
         if self.username.is_empty() {
             return Err(UserValidationError::MissingUsername);
@@ -41,7 +41,7 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
 
         return match outcome {
             Outcome::Success(user) => Outcome::Success(user),
-            Outcome::Failure((status, err)) => Outcome::Failure((*status, err.clone())),
+            Outcome::Failure((status, err)) => Outcome::Failure((*status, *err)),
             Outcome::Forward(()) => Outcome::Forward(()),
         };
 
@@ -55,7 +55,7 @@ impl<'r> rocket::request::FromRequest<'r> for &'r User {
 
             match schemes.authenticate(req).await {
                 Success(user) => Success(user),
-                Failure(err) => return Outcome::from_err(err, *missing_auth_policy),
+                Failure(err) => Outcome::from_err(err, missing_auth_policy),
                 Forward(_) => match missing_auth_policy {
                     MissingAuthPolicy::Fail => {
                         Failure((Status::Unauthorized, AuthenticationError::Unauthenticated))

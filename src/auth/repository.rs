@@ -1,21 +1,22 @@
+use std::sync::Arc;
+
 use rocket::{
     request::{FromRequest, Outcome},
     Request, Sentinel,
 };
-
 use tokio::sync::RwLock;
 
-use crate::{PasswordHasher, Services, User, UserStore};
+use crate::{PasswordHasher, Services, User, UserStore, UserStoreScope};
 
 pub struct UserRepository {
-    pub user_store: RwLock<Box<dyn UserStore>>,
-    pub password_hasher: Box<dyn PasswordHasher>,
+    pub user_store: RwLock<Box<dyn UserStoreScope>>,
+    pub password_hasher: Arc<dyn PasswordHasher>,
 }
 
 impl UserRepository {
-    pub(crate) fn new(
-        user_store: Box<dyn UserStore>,
-        password_hasher: Box<dyn PasswordHasher>,
+    pub fn new(
+        user_store: Box<dyn UserStoreScope>,
+        password_hasher: Arc<dyn PasswordHasher>,
     ) -> Self {
         Self {
             user_store: RwLock::new(user_store),
@@ -84,18 +85,26 @@ impl<'r> FromRequest<'r> for &'r UserRepository {
     type Error = ();
 
     async fn from_request(req: &'r Request<'_>) -> Outcome<Self, Self::Error> {
-        Outcome::Success(req.user_repository())
+        Outcome::Success(
+            req.local_cache_async(async { req.user_repository().await })
+                .await,
+        )
     }
 }
 
 impl Sentinel for &UserRepository {
     fn abort(rocket: &rocket::Rocket<rocket::Ignite>) -> bool {
-        if rocket.state::<UserRepository>().is_none() {
-            log::error!("UserRepository is not configured. Attach Identity::fairing() on your rocket instance.");
-            true
-        } else {
-            false
+        if rocket.state::<Box<dyn UserStore>>().is_none() {
+            log::error!("UserStore is not configured but required for UserRepository. Attach Identity::fairing() on your rocket instance and add a UserStore to your configuration.");
+            return true;
         }
+
+        if rocket.state::<Arc<dyn PasswordHasher>>().is_none() {
+            log::error!("PasswordHasher is not configured but required for UserRepository. Attach Identity::fairing() on your rocket instance and add a PasswordHasher to your configuration.");
+            return true;
+        }
+
+        false
     }
 }
 

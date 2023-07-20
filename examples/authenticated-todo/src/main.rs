@@ -121,7 +121,7 @@ async fn login(
     session: CookieSession<'_>,
 ) -> Result<Redirect, Template> {
     let user = users
-        .authenticate(&login_form.username, &login_form.password)
+        .authenticate(login_form.username, login_form.password)
         .await
         .map_err(|e| {
             error_!("UserRepository::authenticate() error: {}", e);
@@ -177,8 +177,10 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 
 #[launch]
 fn rocket() -> _ {
-    let identity_config =
-        Identity::config(InMemoryUserStore::new()).add_scheme(CookieScheme::default());
+    let identity_config = Identity::config()
+        .with_user_store(InMemoryUserStore::new())
+        .add_scheme(CookieScheme::default())
+        .build();
 
     rocket::build()
         .attach(DbConn::fairing())

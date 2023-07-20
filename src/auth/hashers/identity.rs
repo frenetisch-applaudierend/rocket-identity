@@ -1,5 +1,6 @@
 use crate::hashers::impls::prelude::*;
 
+#[derive(Debug)]
 pub struct IdentityPasswordHasher;
 
 impl PasswordHasher for IdentityPasswordHasher {

@@ -32,7 +32,7 @@ impl AuthenticationScheme for CookieScheme {
     }
 
     async fn authenticate(&self, req: &rocket::Request) -> Outcome {
-        let users = req.user_repository();
+        let users = req.user_repository().await;
         let cookies = req.cookies();
 
         let Some(session_cookie) = cookies.get_private(&self.cookie_name) else {

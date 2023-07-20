@@ -23,7 +23,10 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 }
 
 fn setup() -> Rocket<Build> {
-    let config = Identity::config(InMemoryUserStore::new()).add_scheme(Basic::new("Server"));
+    let config = Identity::config()
+        .with_user_store(InMemoryUserStore::new())
+        .add_scheme(Basic::new("Server"))
+        .build();
 
     rocket::build()
         .mount("/", routes![handler])
@@ -33,9 +36,10 @@ fn setup() -> Rocket<Build> {
 }
 
 async fn initialize(rocket: &Rocket<rocket::Orbit>) {
-    let repo = rocket.user_repository();
+    let users = rocket.user_repository().await;
 
-    repo.add_user(&User::with_username("user1"), Some("pass1"))
+    users
+        .add_user(&User::with_username("user1"), Some("pass1"))
         .await
         .expect("Could not add user");
 }

@@ -1,6 +1,6 @@
 use crate::{util::Result, User};
 
-pub trait PasswordHasher: Send + Sync {
+pub trait PasswordHasher: Send + Sync + core::fmt::Debug + 'static {
     fn hash_password(&self, user: &User, password: &str) -> Result<PasswordHash>;
 
     fn verify_password(

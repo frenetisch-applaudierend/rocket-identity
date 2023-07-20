@@ -5,7 +5,7 @@ use crate::{config::MissingAuthPolicy, User};
 
 /// Encodes information about a way to authenticate a User.
 #[rocket::async_trait]
-pub trait AuthenticationScheme: Send + Sync + core::fmt::Debug {
+pub trait AuthenticationScheme: Send + Sync + core::fmt::Debug + 'static {
     /// The name of this authentication scheme.
     fn name(&self) -> String;
 

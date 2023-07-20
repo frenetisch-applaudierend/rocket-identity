@@ -44,3 +44,9 @@ impl PasswordHasher for Argon2PasswordHasher {
             .is_ok())
     }
 }
+
+impl core::fmt::Debug for Argon2PasswordHasher {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Argon2PasswordHasher").finish()
+    }
+}

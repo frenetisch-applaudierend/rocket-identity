@@ -45,7 +45,7 @@ impl Basic {
             return Outcome::Failure(AuthenticationError::Unauthenticated);
         };
 
-        let repository = req.user_repository();
+        let repository = req.user_repository().await;
 
         match repository.authenticate(username, pass).await {
             Ok(user) => Outcome::Success(user),

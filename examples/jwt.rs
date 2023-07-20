@@ -80,7 +80,10 @@ fn rocket() -> _ {
         deconding_key: DecodingKey::from_secret(secret),
     };
 
-    let config = Identity::config(user_store).add_scheme(JwtBearer::new(jwt_config));
+    let config = Identity::config()
+        .with_user_store(user_store)
+        .add_scheme(JwtBearer::new(jwt_config))
+        .build();
 
     rocket::build()
         .mount("/", routes![login, index, admin])
@@ -91,15 +94,17 @@ fn rocket() -> _ {
 }
 
 async fn setup_users(rocket: &Rocket<Orbit>) {
-    let repo = rocket.user_repository();
+    let users = rocket.user_repository().await;
 
-    repo.add_user(&User::with_username("user1"), Some("pass1"))
+    users
+        .add_user(&User::with_username("user1"), Some("pass1"))
         .await
         .expect("Could not add user");
 
     let admin = &mut User::with_username("admin");
     admin.roles.add("admin");
-    repo.add_user(admin, Some("admin"))
+    users
+        .add_user(admin, Some("admin"))
         .await
         .expect("Could not add user");
 }
