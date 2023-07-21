@@ -8,7 +8,7 @@ use rocket::{
 };
 use rocket_identity::{
     schemes::basic::Basic,
-    stores::InMemoryUserStore,
+    stores::in_memory::InMemoryUserStore,
     {Identity, Services, User},
 };
 

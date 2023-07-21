@@ -21,7 +21,7 @@ use rocket::{Build, Rocket};
 use rocket_dyn_templates::{context, Template};
 
 use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
-use rocket_identity::stores::InMemoryUserStore;
+use rocket_identity::stores::in_memory::InMemoryUserStore;
 use rocket_identity::{Identity, User, UserRepository};
 
 use crate::task::{Task, Todo};

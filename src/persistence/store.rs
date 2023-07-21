@@ -11,7 +11,7 @@ pub trait UserStore: Send + Sync + core::fmt::Debug + 'static {
 
 /// Trait for an object that persists users.
 #[rocket::async_trait]
-pub trait UserStoreScope: Send + Sync + 'static {
+pub trait UserStoreScope: Send + Sync + core::fmt::Debug + 'static {
     /// Find a user by their username.
     async fn find_user_by_username(&self, username: &str) -> Result<Option<User>>;
 

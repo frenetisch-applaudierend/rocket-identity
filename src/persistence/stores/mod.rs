@@ -1,5 +1,4 @@
-mod in_memory;
+pub mod in_memory;
+pub mod diesel;
 
 pub mod impls;
-
-pub use in_memory::*;

@@ -1,7 +1,7 @@
 use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
     schemes::basic::Basic,
-    stores::InMemoryUserStore,
+    stores::in_memory::InMemoryUserStore,
     {Identity, Services, User},
 };
 
