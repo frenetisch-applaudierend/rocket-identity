@@ -2,24 +2,10 @@ use diesel::prelude::*;
 
 use crate::stores::impls::prelude::*;
 
-use super::model::PersistedUser;
+use super::queries;
 
 pub struct SqliteScope<T: 'static> {
     pub conn: rocket_sync_db_pools::Connection<T, SqliteConnection>,
-}
-
-pub struct PgScope<T: 'static> {
-    pub conn: rocket_sync_db_pools::Connection<T, PgConnection>,
-}
-
-macro_rules! find_user_by_username {
-    ($username:expr) => {{
-        use super::schema::users;
-
-        users::table
-            .filter(users::username.eq($username))
-            .select(PersistedUser::as_select())
-    }};
 }
 
 #[rocket::async_trait]
@@ -30,7 +16,7 @@ impl<T> UserStoreScope for SqliteScope<T> {
         let user = self
             .conn
             .run(|c| {
-                find_user_by_username!(username)
+                queries::find_user_by_username!(username)
                     .first(c)
                     .optional()
                     .map_err(Box::new)

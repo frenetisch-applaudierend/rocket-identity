@@ -34,7 +34,7 @@ pub struct DbConn(diesel::SqliteConnection);
 // TODO: Derive this in a macro
 #[rocket::async_trait]
 impl DieselScopeProvider for DbConn {
-    type Scope = rocket_identity::stores::diesel::SqliteScope<DbConn>;
+    type Scope = rocket_identity::stores::diesel::sqlite::SqliteScope<DbConn>;
 
     async fn create_from_request(req: &Request<'_>) -> Result<Self::Scope, ProviderCreationError> {
         use rocket::outcome::Outcome;
