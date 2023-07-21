@@ -1,21 +1,18 @@
 use rocket::{Orbit, Request, Rocket};
 
+use crate::UserStoreScope;
+
 #[rocket::async_trait]
-pub trait DieselConnectionProvider: Sized + Send + Sync + 'static {
-    async fn create_from_request(req: &Request<'_>) -> Result<Self, ProviderCreationError>;
+pub trait DieselScopeProvider: Send + Sync + 'static {
+    type Scope: UserStoreScope;
 
-    async fn create_from_rocket(rocket: &Rocket<Orbit>) -> Result<Self, ProviderCreationError>;
+    async fn create_from_request(req: &Request<'_>) -> Result<Self::Scope, ProviderCreationError>;
 
-    async fn with_connection<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(DieselConnection) -> R + Send + 'static,
-        R: Send + 'static;
-}
-
-pub enum DieselConnection<'a> {
-    Sqlite(&'a mut diesel::SqliteConnection),
+    async fn create_from_rocket(
+        rocket: &Rocket<Orbit>,
+    ) -> Result<Self::Scope, ProviderCreationError>;
 }
 
 #[derive(Debug, thiserror::Error)]
-#[error("Could not create database connection provider")]
+#[error("Failed to provide connection")]
 pub struct ProviderCreationError;

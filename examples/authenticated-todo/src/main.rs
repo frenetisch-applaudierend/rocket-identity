@@ -21,9 +21,7 @@ use rocket::{Build, Orbit, Request, Rocket};
 use rocket_dyn_templates::{context, Template};
 
 use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
-use rocket_identity::stores::diesel::{
-    DieselConnection, DieselConnectionProvider, ProviderCreationError,
-};
+use rocket_identity::stores::diesel::{DieselScopeProvider, ProviderCreationError};
 use rocket_identity::stores::in_memory::InMemoryUserStore;
 use rocket_identity::{Identity, User, UserRepository};
 
@@ -33,27 +31,27 @@ use crate::user::{Login, Registration};
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
 
+// TODO: Derive this in a macro
 #[rocket::async_trait]
-impl DieselConnectionProvider for DbConn {
-    async fn create_from_request(req: &Request<'_>) -> Result<Self, ProviderCreationError> {
+impl DieselScopeProvider for DbConn {
+    type Scope = rocket_identity::stores::diesel::SqliteScope<DbConn>;
+
+    async fn create_from_request(req: &Request<'_>) -> Result<Self::Scope, ProviderCreationError> {
         use rocket::outcome::Outcome;
 
-        match req.guard::<Self>().await {
-            Outcome::Success(conn) => Ok(conn),
+        let conn = match req.guard::<Self>().await {
+            Outcome::Success(conn) => Ok(conn.0),
             _ => Err(ProviderCreationError),
-        }
+        }?;
+
+        Ok(Self::Scope { conn })
     }
 
-    async fn create_from_rocket(rocket: &Rocket<Orbit>) -> Result<Self, ProviderCreationError> {
-        Self::get_one(rocket).await.ok_or(ProviderCreationError)
-    }
-
-    async fn with_connection<F, R>(&self, f: F) -> R
-    where
-        F: FnOnce(DieselConnection) -> R + Send + 'static,
-        R: Send + 'static,
-    {
-        self.run(|c| f(DieselConnection::Sqlite(c))).await
+    async fn create_from_rocket(
+        rocket: &Rocket<Orbit>,
+    ) -> Result<Self::Scope, ProviderCreationError> {
+        let conn = Self::get_one(rocket).await.ok_or(ProviderCreationError)?.0;
+        Ok(Self::Scope { conn })
     }
 }
 
