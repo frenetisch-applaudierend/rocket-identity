@@ -6,7 +6,6 @@ use crate::{UserStore, UserStoreScope};
 
 use super::{DieselConnectionProvider, DieselUserStoreScope};
 
-#[derive(Debug)]
 pub struct DieselUserStore<P: DieselConnectionProvider> {
     _marker: PhantomData<std::sync::Mutex<P>>,
 }
@@ -21,5 +20,12 @@ impl<P: DieselConnectionProvider> UserStore for DieselUserStore<P> {
     async fn create_global_scope(&self, rocket: &Rocket<Orbit>) -> Option<Box<dyn UserStoreScope>> {
         let provider = P::create_from_rocket(rocket).await.unwrap();
         Some(Box::new(DieselUserStoreScope::new(provider)))
+    }
+}
+
+
+impl<P: DieselConnectionProvider> core::fmt::Debug for DieselUserStore<P> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("DieselUserStore").finish()
     }
 }

@@ -16,11 +16,12 @@ use rocket::fs::{relative, FileServer};
 use rocket::request::FlashMessage;
 use rocket::response::{Flash, Redirect};
 use rocket::serde::Serialize;
-use rocket::{Build, Rocket};
+use rocket::{Build, Orbit, Request, Rocket};
 
 use rocket_dyn_templates::{context, Template};
 
 use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
+use rocket_identity::stores::diesel::{DieselConnectionProvider, ProviderCreationError};
 use rocket_identity::stores::in_memory::InMemoryUserStore;
 use rocket_identity::{Identity, User, UserRepository};
 
@@ -29,6 +30,32 @@ use crate::user::{Login, Registration};
 
 #[database("sqlite_database")]
 pub struct DbConn(diesel::SqliteConnection);
+
+#[rocket::async_trait]
+impl DieselConnectionProvider for DbConn {
+    type Conn = diesel::SqliteConnection;
+
+    async fn create_from_request(req: &Request<'_>) -> Result<Self, ProviderCreationError> {
+        use rocket::outcome::Outcome;
+
+        match req.guard::<Self>().await {
+            Outcome::Success(conn) => Ok(conn),
+            _ => Err(ProviderCreationError),
+        }
+    }
+
+    async fn create_from_rocket(rocket: &Rocket<Orbit>) -> Result<Self, ProviderCreationError> {
+        Self::get_one(rocket).await.ok_or(ProviderCreationError)
+    }
+
+    async fn with_connection<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut Self::Conn) -> R + Send + 'static,
+        R: Send + 'static,
+    {
+        self.run(f).await
+    }
+}
 
 #[derive(Debug, Serialize)]
 #[serde(crate = "rocket::serde")]
