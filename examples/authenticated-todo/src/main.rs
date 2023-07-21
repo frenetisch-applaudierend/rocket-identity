@@ -21,7 +21,9 @@ use rocket::{Build, Orbit, Request, Rocket};
 use rocket_dyn_templates::{context, Template};
 
 use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
-use rocket_identity::stores::diesel::{DieselConnectionProvider, ProviderCreationError};
+use rocket_identity::stores::diesel::{
+    DieselConnection, DieselConnectionProvider, ProviderCreationError,
+};
 use rocket_identity::stores::in_memory::InMemoryUserStore;
 use rocket_identity::{Identity, User, UserRepository};
 
@@ -33,8 +35,6 @@ pub struct DbConn(diesel::SqliteConnection);
 
 #[rocket::async_trait]
 impl DieselConnectionProvider for DbConn {
-    type Conn = diesel::SqliteConnection;
-
     async fn create_from_request(req: &Request<'_>) -> Result<Self, ProviderCreationError> {
         use rocket::outcome::Outcome;
 
@@ -50,10 +50,10 @@ impl DieselConnectionProvider for DbConn {
 
     async fn with_connection<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(&mut Self::Conn) -> R + Send + 'static,
+        F: FnOnce(DieselConnection) -> R + Send + 'static,
         R: Send + 'static,
     {
-        self.run(f).await
+        self.run(|c| f(DieselConnection::Sqlite(c))).await
     }
 }
 
