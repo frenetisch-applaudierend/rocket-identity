@@ -21,8 +21,9 @@ use rocket::{Build, Orbit, Request, Rocket};
 use rocket_dyn_templates::{context, Template};
 
 use rocket_identity::schemes::cookie::{CookieScheme, CookieSession};
-use rocket_identity::stores::diesel::{DieselScopeProvider, ProviderCreationError};
-use rocket_identity::stores::in_memory::InMemoryUserStore;
+use rocket_identity::stores::diesel::{
+    DieselScopeProvider, DieselUserStore, ProviderCreationError,
+};
 use rocket_identity::{Identity, User, UserRepository};
 
 use crate::task::{Task, Todo};
@@ -203,7 +204,7 @@ async fn run_migrations(rocket: Rocket<Build>) -> Rocket<Build> {
 #[launch]
 fn rocket() -> _ {
     let identity_config = Identity::config()
-        .with_user_store(InMemoryUserStore::new())
+        .with_user_store(DieselUserStore::<DbConn>::new())
         .add_scheme(CookieScheme::default())
         .build();
 

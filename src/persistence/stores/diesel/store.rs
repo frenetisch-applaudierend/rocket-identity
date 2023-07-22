@@ -6,8 +6,17 @@ use crate::{UserStore, UserStoreScope};
 
 use super::DieselScopeProvider;
 
+#[derive(Default)]
 pub struct DieselUserStore<P: DieselScopeProvider> {
     _marker: PhantomData<std::sync::Mutex<P>>,
+}
+
+impl<P: DieselScopeProvider> DieselUserStore<P> {
+    pub fn new() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
 }
 
 #[rocket::async_trait]

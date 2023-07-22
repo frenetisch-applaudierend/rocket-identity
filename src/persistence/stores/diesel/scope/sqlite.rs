@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 
-use crate::stores::impls::prelude::*;
+use crate::stores::{diesel::model::NewUser, impls::prelude::*};
 
 use super::queries;
 
@@ -27,17 +27,35 @@ impl<T> UserStoreScope for SqliteScope<T> {
     }
 
     /// Add a user to the store.
-    async fn add_user(
-        &mut self,
-        _user: &User,
-        _password_hash: Option<&PasswordHash>,
-    ) -> Result<()> {
-        todo!()
+    async fn add_user(&mut self, user: &User, password_hash: Option<&PasswordHash>) -> Result<()> {
+        let new_user = NewUser {
+            username: user.username.clone(),
+            password_hash: password_hash.map(|h| h.clone().into_inner()),
+        };
+
+        self.conn
+            .run(|c| queries::add_user!(new_user).execute(c).map_err(Box::new))
+            .await?;
+
+        Ok(())
     }
 
     /// Retrieve the password hash for a given user.
-    async fn password_hash(&self, _user: &User) -> Result<Option<PasswordHash>> {
-        todo!()
+    async fn password_hash(&self, user: &User) -> Result<Option<PasswordHash>> {
+        let username = user.username.to_string();
+        let hash = self
+            .conn
+            .run(|c| {
+                queries::get_password_hash!(username)
+                    .first(c)
+                    .optional()
+                    .map_err(Box::new)
+            })
+            .await?;
+
+        let hash = hash.and_then(|h| h.password_hash).map(PasswordHash::from);
+
+        Ok(hash)
     }
 
     /// Set the password hash for a given user.
