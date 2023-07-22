@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
     hashers::Argon2PasswordHasher,
     persistence::UserStore,
@@ -7,7 +9,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Config {
     pub(crate) user_store: Option<Box<dyn UserStore>>,
-    pub(crate) password_hasher: Option<Box<dyn PasswordHasher>>,
+    pub(crate) password_hasher: Option<Arc<dyn PasswordHasher>>,
     pub(crate) auth_schemes: Vec<Box<dyn AuthenticationScheme>>,
     pub(crate) missing_auth_policy: MissingAuthPolicy,
 }
@@ -31,7 +33,7 @@ impl ConfigBuilder {
     fn config(&mut self) -> &mut Config {
         self.config.get_or_insert_with(|| Config {
             user_store: None,
-            password_hasher: Some(Box::new(Argon2PasswordHasher::new())),
+            password_hasher: Some(Arc::new(Argon2PasswordHasher::new())),
             auth_schemes: Vec::new(),
             missing_auth_policy: MissingAuthPolicy::Fail,
         })
@@ -43,7 +45,7 @@ impl ConfigBuilder {
     }
 
     pub fn with_password_hasher(&mut self, password_hasher: impl PasswordHasher) -> &mut Self {
-        self.config().password_hasher = Some(Box::new(password_hasher));
+        self.config().password_hasher = Some(Arc::new(password_hasher));
         self
     }
 

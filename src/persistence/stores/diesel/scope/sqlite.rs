@@ -12,6 +12,8 @@ pub struct SqliteScope<T: 'static> {
 impl<T> UserStoreScope for SqliteScope<T> {
     /// Find a user by their username.
     async fn find_user_by_username(&self, username: &str) -> Result<Option<User>> {
+        log::debug!("Finding user by username: {}", username);
+
         let username = username.to_string();
         let user = self
             .conn
@@ -28,6 +30,8 @@ impl<T> UserStoreScope for SqliteScope<T> {
 
     /// Add a user to the store.
     async fn add_user(&mut self, user: &User, password_hash: Option<&PasswordHash>) -> Result<()> {
+        log::debug!("Adding user: {}", user.username);
+
         let new_user = NewUser {
             username: user.username.clone(),
             password_hash: password_hash.map(|h| h.clone().into_inner()),
@@ -42,6 +46,8 @@ impl<T> UserStoreScope for SqliteScope<T> {
 
     /// Retrieve the password hash for a given user.
     async fn password_hash(&self, user: &User) -> Result<Option<PasswordHash>> {
+        log::debug!("Retrieving password hash for user: {}", user.username);
+
         let username = user.username.to_string();
         let hash = self
             .conn
@@ -59,11 +65,20 @@ impl<T> UserStoreScope for SqliteScope<T> {
     }
 
     /// Set the password hash for a given user.
-    async fn set_password_hash(
-        &mut self,
-        _user: &User,
-        _password_hash: &PasswordHash,
-    ) -> Result<()> {
-        todo!()
+    async fn set_password_hash(&mut self, user: &User, password_hash: &PasswordHash) -> Result<()> {
+        log::debug!("Setting password hash for user: {}", user.username);
+
+        let username = user.username.clone();
+        let password_hash = password_hash.clone().into_inner();
+
+        self.conn
+            .run(|c| {
+                queries::set_password_hash!(username, password_hash)
+                    .execute(c)
+                    .map_err(Box::new)
+            })
+            .await?;
+
+        Ok(())
     }
 }

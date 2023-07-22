@@ -4,6 +4,20 @@
         {
             "type": "lldb",
             "request": "launch",
+            "name": "Debug authenticated-todo example",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=authenticated-todo",
+                    "--package=authenticated-todo"
+                ]
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}/examples/authenticated-todo"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
             "name": "Debug unit tests in library 'rocket-identity'",
             "cargo": {
                 "args": [

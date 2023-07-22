@@ -67,7 +67,8 @@ impl UserRepository {
             .transpose()
             .map_err(AddUserError::to_other("Failed to hash password"))?;
 
-        let mut user_store = self.user_store.write().await;
+        let mut user_store_guard = self.user_store.write().await;
+        let user_store = user_store_guard.as_mut();
 
         // TODO: Check if user already exists
 
