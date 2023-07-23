@@ -2,7 +2,7 @@ use std::marker::PhantomData;
 
 use rocket::{Orbit, Request, Rocket};
 
-use crate::{UserStore, UserStoreScope};
+use crate::stores::impls::prelude::*;
 
 use super::DieselScopeProvider;
 

@@ -1,6 +1,6 @@
 use rocket::{Orbit, Request, Rocket};
 
-use crate::UserStoreScope;
+use crate::stores::UserStoreScope;
 
 #[rocket::async_trait]
 pub trait DieselScopeProvider: Send + Sync + 'static {

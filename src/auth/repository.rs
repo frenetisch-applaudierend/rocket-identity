@@ -6,7 +6,10 @@ use rocket::{
 };
 use tokio::sync::RwLock;
 
-use crate::{PasswordHasher, Services, User, UserStore, UserStoreScope};
+use crate::{
+    stores::{UserStore, UserStoreScope},
+    PasswordHasher, Services, User,
+};
 
 pub struct UserRepository {
     pub user_store: RwLock<Box<dyn UserStoreScope>>,

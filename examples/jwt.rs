@@ -7,7 +7,7 @@ use rocket::{
 };
 use rocket_identity::{
     schemes::jwt::{JwtBearer, JwtConfig, JwtToken, JwtTokenProvider},
-    stores::in_memory::InMemoryUserStore,
+    stores::memory::MemoryStore,
     {Identity, Services, User, UserRepository},
 };
 
@@ -71,7 +71,7 @@ fn admin(user: &User /*_admin: Authorization<Admin>*/) -> String {
 fn rocket() -> _ {
     // Setup user backing store. In a real app you'd use something
     // that actually persists users
-    let user_store = InMemoryUserStore::new();
+    let user_store = MemoryStore::new();
 
     // This should be read from configuration
     let secret = b"My Secret";

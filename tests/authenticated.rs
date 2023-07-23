@@ -8,7 +8,7 @@ use rocket::{
 };
 use rocket_identity::{
     schemes::basic::Basic,
-    stores::in_memory::InMemoryUserStore,
+    stores::memory::MemoryStore,
     {Identity, Services, User},
 };
 
@@ -24,7 +24,7 @@ fn catch_unauthorized(_req: &Request) -> &'static str {
 
 fn setup() -> Rocket<Build> {
     let config = Identity::config()
-        .with_user_store(InMemoryUserStore::new())
+        .with_user_store(MemoryStore::new())
         .add_scheme(Basic::new("Server"))
         .build();
 

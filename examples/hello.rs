@@ -1,7 +1,7 @@
 use rocket::{fairing::AdHoc, Orbit, Rocket};
 use rocket_identity::{
     schemes::basic::Basic,
-    stores::in_memory::InMemoryUserStore,
+    stores::memory::MemoryStore,
     {Identity, Services, User},
 };
 
@@ -17,7 +17,7 @@ fn index(user: &User) -> String {
 async fn rocket() -> _ {
     // Setup user repository. In a real app you'd use something
     // that actually persists users
-    let user_store = InMemoryUserStore::new();
+    let user_store = MemoryStore::new();
 
     rocket::build()
         .mount("/", routes![index])

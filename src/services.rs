@@ -3,7 +3,8 @@ use std::sync::Arc;
 use rocket::{Orbit, Request, Rocket};
 
 use crate::{
-    config::MissingAuthPolicy, AuthenticationSchemes, PasswordHasher, UserRepository, UserStore,
+    config::MissingAuthPolicy, stores::UserStore, AuthenticationSchemes, PasswordHasher,
+    UserRepository,
 };
 
 #[rocket::async_trait]
