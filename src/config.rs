@@ -2,8 +2,9 @@ use std::sync::Arc;
 
 use crate::{
     hashers::Argon2PasswordHasher,
+    schemes::AuthenticationScheme,
     stores::UserStore,
-    {AuthenticationScheme, Identity, PasswordHasher},
+    {Identity, PasswordHasher},
 };
 
 #[derive(Debug)]

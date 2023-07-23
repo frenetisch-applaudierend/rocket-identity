@@ -1,8 +1,9 @@
 use rocket::{http::Status, request::Outcome, Sentinel};
 
 use crate::{
-    config::MissingAuthPolicy, AuthenticationError, AuthenticationSchemes, Claims, FromAuthError,
-    InternalServices, Roles, Services,
+    config::MissingAuthPolicy,
+    schemes::{AuthenticationError, AuthenticationSchemes, FromAuthError},
+    Claims, InternalServices, Roles, Services,
 };
 
 #[derive(Debug, Clone)]

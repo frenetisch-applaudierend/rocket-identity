@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 
 use yansi::Paint;
 
-use crate::{config::Config, AuthenticationSchemes, Identity, Services};
+use crate::{config::Config, schemes::AuthenticationSchemes, Identity, Services};
 
 impl Identity {
     pub fn fairing(config: Config) -> Self {
