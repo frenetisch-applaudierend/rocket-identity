@@ -1,6 +1,6 @@
-use rocket::{Request, Rocket, Orbit};
+use rocket::{Orbit, Request, Rocket};
 
-use crate::{util::Result, PasswordHash, User};
+use crate::{hashers::PasswordHash, util::Result, User};
 
 #[rocket::async_trait]
 pub trait UserStore: Send + Sync + core::fmt::Debug + 'static {

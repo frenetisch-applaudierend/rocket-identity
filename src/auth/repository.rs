@@ -7,8 +7,9 @@ use rocket::{
 use tokio::sync::RwLock;
 
 use crate::{
+    hashers::PasswordHasher,
     stores::{UserStore, UserStoreScope},
-    PasswordHasher, Services, User,
+    Services, User,
 };
 
 pub struct UserRepository {

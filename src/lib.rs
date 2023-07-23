@@ -3,9 +3,10 @@ mod fairing;
 mod services;
 
 pub mod config;
+pub mod hashers;
+pub mod schemes;
 pub mod stores;
 pub mod util;
-pub mod schemes;
 
 pub use auth::*;
 pub use fairing::*;

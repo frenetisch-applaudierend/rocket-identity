@@ -20,7 +20,7 @@ impl PasswordHasher for IdentityPasswordHasher {
 
 #[cfg(test)]
 mod test {
-    use crate::{PasswordHasher, User};
+    use crate::{hashers::PasswordHasher, User};
 
     #[test]
     fn test_roundtrip() {
