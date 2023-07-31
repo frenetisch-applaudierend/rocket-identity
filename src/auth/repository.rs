@@ -9,6 +9,7 @@ use tokio::sync::RwLock;
 use crate::{
     hashers::PasswordHasher,
     stores::{UserStore, UserStoreScope},
+    util::BoxableError,
     Services, User,
 };
 
@@ -36,27 +37,41 @@ impl UserRepository {
             .await
             .map_err(|e| {
                 log::error!("Failed to find user by username: {}", e);
-                FindUserError::Other
+                e.boxed().into()
             })
     }
 
     pub async fn authenticate(&self, username: &str, password: &str) -> Result<User, LoginError> {
         let user_store = self.user_store.read().await;
 
-        let Some(user) = user_store.find_user_by_username(username).await
-            .map_err(LoginError::to_other("Failed to find user by username"))? else {
+        let user = user_store
+            .find_user_by_username(username)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to find user: {}", e);
+                LoginError::Other(e.boxed())
+            })?;
+
+        let Some(user) = user else {
             return Err(LoginError::UserNotFound);
         };
 
-        let Some(password_hash) = user_store.password_hash(&user).await
-            .map_err(LoginError::to_other("Failed to retrieve password hash"))? else {
+        let password_hash = user_store.password_hash(&user).await.map_err(|e| {
+            log::error!("Failed to retrieve password hash: {}", e);
+            LoginError::Other(e.boxed())
+        })?;
+
+        let Some(password_hash) = password_hash else {
             return Err(LoginError::MissingPassword);
         };
 
         if !self
             .password_hasher
             .verify_password(&user, &password_hash, password)
-            .map_err(LoginError::to_other("Failed to verify password"))?
+            .map_err(|e| {
+                log::error!("Failed to verify password: {}", e);
+                LoginError::Other(e)
+            })?
         {
             return Err(LoginError::IncorrectPassword);
         }
@@ -69,17 +84,21 @@ impl UserRepository {
         let password_hash = password
             .map(|p| self.password_hasher.hash_password(user, p))
             .transpose()
-            .map_err(AddUserError::to_other("Failed to hash password"))?;
+            .map_err(|e| {
+                log::error!("Failed to hash password: {}", e);
+                AddUserError::Other(e)
+            })?;
 
         let mut user_store_guard = self.user_store.write().await;
         let user_store = user_store_guard.as_mut();
 
-        // TODO: Check if user already exists
-
         user_store
             .add_user(user, password_hash.as_ref())
             .await
-            .map_err(AddUserError::to_other("Failed to add user to store"))?;
+            .map_err(|e| {
+                log::error!("Failed to add user: {}", e);
+                AddUserError::from(e)
+            })?;
 
         Ok(())
     }
@@ -116,44 +135,38 @@ impl Sentinel for &UserRepository {
 #[derive(Debug, thiserror::Error)]
 pub enum FindUserError {
     #[error("Some other error happened")]
-    Other,
+    Other(#[from] Box<dyn std::error::Error>),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum LoginError {
-    #[error("The user could not be found")]
+    #[error("user could not be found")]
     UserNotFound,
 
-    #[error("The user could be found but has no password")]
+    #[error("user has no password")]
     MissingPassword,
 
-    #[error("The provided password does not match the users")]
+    #[error("provided password is incorrect")]
     IncorrectPassword,
 
-    #[error("Some other error happened")]
-    Other,
-}
-
-impl LoginError {
-    fn to_other(msg: &'static str) -> impl FnOnce(Box<dyn std::error::Error>) -> Self {
-        move |e| {
-            log::error!("{}: {}", msg, e);
-            Self::Other
-        }
-    }
+    #[error("user could not be authenticated")]
+    Other(#[from] Box<dyn std::error::Error>),
 }
 
 #[derive(Debug, thiserror::Error)]
 pub enum AddUserError {
-    #[error("Some other error happened")]
-    Other,
+    #[error("a user with the given username already exists")]
+    UsernameExists,
+
+    #[error("user could not be added")]
+    Other(#[from] Box<dyn std::error::Error>),
 }
 
-impl AddUserError {
-    fn to_other(msg: &'static str) -> impl FnOnce(Box<dyn std::error::Error>) -> Self {
-        move |e| {
-            log::error!("{}: {}", msg, e);
-            Self::Other
+impl From<crate::stores::AddUserError> for AddUserError {
+    fn from(e: crate::stores::AddUserError) -> Self {
+        match e {
+            crate::stores::AddUserError::UsernameExists => Self::UsernameExists,
+            crate::stores::AddUserError::Other(e) => Self::Other(e),
         }
     }
 }

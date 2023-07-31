@@ -87,7 +87,7 @@ impl From<LoginError> for AuthenticationError {
             LoginError::UserNotFound => AuthenticationError::Unauthenticated,
             LoginError::MissingPassword => AuthenticationError::Unauthenticated,
             LoginError::IncorrectPassword => AuthenticationError::Unauthenticated,
-            LoginError::Other => AuthenticationError::Other,
+            LoginError::Other(_) => AuthenticationError::Other,
         }
     }
 }

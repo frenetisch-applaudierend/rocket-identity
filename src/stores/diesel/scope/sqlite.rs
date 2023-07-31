@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 
-use crate::stores::{diesel::model::NewUser, impls::prelude::*};
+use crate::stores::diesel::model::NewUser;
+use crate::stores::impls::prelude::*;
 
 use super::queries;
 
@@ -11,7 +12,7 @@ pub struct SqliteScope<T: 'static> {
 #[rocket::async_trait]
 impl<T> UserStoreScope for SqliteScope<T> {
     /// Find a user by their username.
-    async fn find_user_by_username(&self, username: &str) -> Result<Option<User>> {
+    async fn find_user_by_username(&self, username: &str) -> Result<Option<User>, FindUserError> {
         log::debug!("Finding user by username: {}", username);
 
         let username = username.to_string();
@@ -21,15 +22,19 @@ impl<T> UserStoreScope for SqliteScope<T> {
                 queries::find_user_by_username!(username)
                     .first(c)
                     .optional()
-                    .map_err(Box::new)
             })
-            .await?;
+            .await
+            .map_err(BoxableError::boxed)?;
 
         Ok(user.map(|u| u.into()))
     }
 
     /// Add a user to the store.
-    async fn add_user(&mut self, user: &User, password_hash: Option<&PasswordHash>) -> Result<()> {
+    async fn add_user(
+        &mut self,
+        user: &User,
+        password_hash: Option<&PasswordHash>,
+    ) -> Result<(), AddUserError> {
         log::debug!("Adding user: {}", user.username);
 
         let new_user = NewUser {
@@ -38,26 +43,23 @@ impl<T> UserStoreScope for SqliteScope<T> {
         };
 
         self.conn
-            .run(|c| queries::add_user!(new_user).execute(c).map_err(Box::new))
-            .await?;
+            .run(|c| queries::add_user!(new_user).execute(c))
+            .await
+            .map_err(BoxableError::boxed)?;
 
         Ok(())
     }
 
     /// Retrieve the password hash for a given user.
-    async fn password_hash(&self, user: &User) -> Result<Option<PasswordHash>> {
+    async fn password_hash(&self, user: &User) -> Result<Option<PasswordHash>, PasswordHashError> {
         log::debug!("Retrieving password hash for user: {}", user.username);
 
         let username = user.username.to_string();
         let hash = self
             .conn
-            .run(|c| {
-                queries::get_password_hash!(username)
-                    .first(c)
-                    .optional()
-                    .map_err(Box::new)
-            })
-            .await?;
+            .run(|c| queries::get_password_hash!(username).first(c).optional())
+            .await
+            .map_err(BoxableError::boxed)?;
 
         let hash = hash.and_then(|h| h.password_hash).map(PasswordHash::from);
 
@@ -65,19 +67,20 @@ impl<T> UserStoreScope for SqliteScope<T> {
     }
 
     /// Set the password hash for a given user.
-    async fn set_password_hash(&mut self, user: &User, password_hash: &PasswordHash) -> Result<()> {
+    async fn set_password_hash(
+        &mut self,
+        user: &User,
+        password_hash: &PasswordHash,
+    ) -> Result<(), PasswordHashError> {
         log::debug!("Setting password hash for user: {}", user.username);
 
         let username = user.username.clone();
         let password_hash = password_hash.clone().into_inner();
 
         self.conn
-            .run(|c| {
-                queries::set_password_hash!(username, password_hash)
-                    .execute(c)
-                    .map_err(Box::new)
-            })
-            .await?;
+            .run(|c| queries::set_password_hash!(username, password_hash).execute(c))
+            .await
+            .map_err(BoxableError::boxed)?;
 
         Ok(())
     }

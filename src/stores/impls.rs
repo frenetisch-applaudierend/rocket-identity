@@ -1,8 +1,8 @@
 pub mod prelude {
     pub use crate::{
         hashers::PasswordHash,
-        stores::{UserStore, UserStoreScope},
-        util::Result,
+        stores::{AddUserError, FindUserError, PasswordHashError, UserStore, UserStoreScope},
+        util::BoxableError,
         User,
     };
 }
